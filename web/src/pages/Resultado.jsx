@@ -17,7 +17,11 @@ export default function Resultado() {
 
   const descargarReporte = () => {
     const columnas = ['fila', 'campo', 'valor', 'problema', 'solucion'];
-    const escapar = (v) => `"${String(v).replaceAll('"', '""')}"`;
+    // Neutraliza fórmulas al abrir el CSV en Excel (inyección de fórmulas) y escapa comillas.
+    const escapar = (v) => {
+      const texto = /^[=+\-@\t\r]/.test(String(v)) ? `'${v}` : String(v);
+      return `"${texto.replaceAll('"', '""')}"`;
+    };
     const csv = [columnas.join(','), ...errores.map((e) => columnas.map((c) => escapar(e[c])).join(','))].join('\n');
     const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
     const enlace = document.createElement('a');

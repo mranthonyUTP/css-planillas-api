@@ -10,21 +10,40 @@ el logo real de la CSS. Mantener esa franja.
 ## Estructura del repositorio
 
 ```
-/web   Frontend: React + Vite + React Router (JavaScript, sin TypeScript)
-/api   Backend: Node.js + Express (pendiente)
-/docs  Documentación: errores frecuentes (HU-01), modelo de amenazas (HU-03) (pendiente)
+/web    Frontend: React + Vite + React Router (JavaScript, sin TypeScript)
+/api    Backend: Node.js + Express 5. Contrato en api/openapi.yaml (HU-04)
+/docs   errores-frecuentes.md (HU-01) y modelo-amenazas.md (HU-03)
+/.github/workflows  ci.yml (HU-02, SonarQube) y deploy-staging.yml (HU-10, Render + pruebas de humo)
+docker-compose.yml  PostgreSQL + API para desarrollo local
+render.yaml         Infraestructura de staging (Render Blueprint)
 ```
 
 ## Comandos
 
 ```
-cd web
-npm install
-npm run dev       # servidor local en http://localhost:5173
-npm run build     # build de producción en web/dist
+# API + PostgreSQL
+docker compose up --build            # API en http://localhost:3000
+cd api && npm test                   # pruebas (memoria; con TEST_DATABASE_URL también PostgreSQL)
+cd api && npm run dev                # API sin Docker, almacenamiento en memoria
+cd api && BASE_URL=... npm run smoke # pruebas de humo contra un ambiente
+
+# Portal
+cd web && npm run dev                                   # modo simulado (sin API)
+cd web && VITE_API_URL=http://localhost:3000 npm run dev  # contra la API real
+cd web && npm test && npm run build
 ```
 
-Para entrar al portal en modo simulado, cualquier RUC, usuario y contraseña no vacíos sirven.
+En `AUTH_MODE=local` (por defecto) cualquier RUC, usuario y contraseña no vacíos inician sesión, y cada token
+solo ve los datos de su RUC. Con `AUTH_MODE=oidc` + `OIDC_ISSUER` la API valida tokens de Keycloak por JWKS.
+
+## Estado de la API
+
+- Variables de entorno en `api/.env.example`. Sin `DATABASE_URL` usa almacenamiento en memoria.
+- Esquema SQL en `api/src/store/esquema.sql` (se aplica al iniciar). Idempotencia garantizada por restricciones
+  `UNIQUE (empresa_ruc, idempotency_key)` y `UNIQUE (validacion_id)`.
+- Las reglas viven en `api/src/validacion/reglas.js`. `web/src/validacion/reglas.js` es una copia para el modo
+  simulado: **si cambias una regla, cambia ambas**.
+- Pruebas: `node --test` con `fetch` nativo contra la app levantada en un puerto libre (sin Supertest).
 
 ## Tecnologías definidas
 
@@ -70,7 +89,7 @@ El MVP abarca los Sprints 0 a 2. El Sprint 3 es backlog.
 Dependencias: HU-12 necesita HU-05, HU-06, HU-08 y HU-11. HU-09 usa las reglas de HU-01. HU-15 usa el OpenAPI de
 HU-04 y el staging de HU-10.
 
-## Contrato de API (propuesto, el frontend ya lo consume)
+## Contrato de API (implementado; detalle en api/openapi.yaml)
 
 | Método y ruta | Uso | HU |
 |---|---|---|
@@ -78,8 +97,9 @@ HU-04 y el staging de HU-10.
 | `POST /planillas/validar` | Pre-validación sin registrar. `multipart/form-data`: `archivo`, `periodo`, `tipo` | HU-05, HU-06 |
 | `POST /planillas/enviar` | Envío oficial de una validación exitosa. Cabecera `Idempotency-Key` | HU-08, HU-12 |
 | `GET /cargas` | Historial de cargas de la empresa | HU-11 |
+| `GET /salud` | Estado del servicio (pruebas de humo) | HU-10 |
 
-Formato de error de validación: `{ fila, campo, valor, problema, solucion }`.
+Formato de error de validación: `{ fila, campo, valor, problema, solucion }`. Errores de la API: `{ mensaje, codigo }`.
 El cliente está en `web/src/api/`. Con `VITE_API_URL` vacío usa el mock (`mock.js`); con una URL usa la API real.
 
 ## Reglas de validación del mock (base para HU-01 y HU-09)

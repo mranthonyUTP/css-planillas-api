@@ -21,6 +21,8 @@ async function pedir(ruta, { metodo = 'GET', token, cuerpo, cabeceras = {} } = {
   if (!respuesta.ok) {
     const e = new Error(datos.mensaje ?? 'No pudimos completar la solicitud. Intenta de nuevo.');
     e.estado = respuesta.status;
+    // Token vencido o inválido: la sesión se cierra y el portal vuelve al inicio de sesión.
+    if (respuesta.status === 401 && token) window.dispatchEvent(new Event('sesion-expirada'));
     throw e;
   }
   return datos;
