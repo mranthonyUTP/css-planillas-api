@@ -1,0 +1,256 @@
+openapi: 3.1.0
+info:
+  title: API de Planillas (css-planillas-api)
+  version: 1.0.0
+  summary: Pre-validación y envío oficial de planillas de seguridad social.
+  description: |
+    Prototipo académico. No es un servicio oficial de la Caja de Seguro Social.
+
+    Flujo: `POST /auth/login` → `POST /planillas/validar` (dry-run, no registra la planilla)
+    → `POST /planillas/enviar` (con `Idempotency-Key`) → `GET /cargas`.
+
+    Todos los errores responden con el esquema `Error` y un mensaje en español.
+servers:
+  - url: http://localhost:3000
+    description: Desarrollo local
+  - url: https://css-planillas-api.onrender.com
+    description: Staging (ajustar a la URL real)
+tags:
+  - name: Autenticación
+    description: Inicio de sesión (HU-07)
+  - name: Planillas
+    description: Pre-validación y envío oficial (HU-05, HU-06, HU-08, HU-12)
+  - name: Auditoría
+    description: Historial de cargas (HU-11)
+  - name: Operación
+    description: Salud del servicio para pruebas de humo (HU-10)
+
+paths:
+  /salud:
+    get:
+      tags: [Operación]
+      operationId: obtenerSalud
+      summary: Estado del servicio (pruebas de humo)
+      security: []
+      responses:
+        '200':
+          description: Servicio disponible
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  estado: { type: string, const: ok }
+                  almacenamiento: { type: string, enum: [memoria, postgres] }
+
+  /auth/login:
+    post:
+      tags: [Autenticación]
+      operationId: iniciarSesion
+      summary: Inicia sesión y devuelve un token (solo en AUTH_MODE=local)
+      description: |
+        HU-07. En producción el portal usa el flujo OAuth2 de Keycloak y este endpoint responde 404.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ruc, usuario, clave]
+              properties:
+                ruc: { type: string, maxLength: 100, examples: ['155123456-2-2020'] }
+                usuario: { type: string, maxLength: 100 }
+                clave: { type: string, maxLength: 100, format: password }
+      responses:
+        '200':
+          description: Sesión iniciada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, usuario, empresa]
+                properties:
+                  token: { type: string, description: JWT con el RUC de la empresa }
+                  usuario: { type: string }
+                  empresa:
+                    type: object
+                    properties:
+                      ruc: { type: string }
+                      nombre: { type: string }
+        '400': { $ref: '#/components/responses/SolicitudInvalida' }
+        '404': { description: Deshabilitado en modo OAuth2, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /planillas/validar:
+    post:
+      tags: [Planillas]
+      operationId: validarPlanilla
+      summary: Pre-valida una planilla sin registrarla (dry-run)
+      description: HU-05 y HU-06. Registra la carga en la auditoría, pero no el envío.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [archivo, periodo, tipo]
+              properties:
+                archivo:
+                  type: string
+                  format: binary
+                  description: Planilla .csv o .xlsx con las columnas de `FilaPlanilla`. Máximo 5 MB.
+                  contentMediaType: text/csv
+                periodo: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$', examples: ['2026-10'] }
+                tipo: { type: string, enum: [Regular, Complementaria] }
+      responses:
+        '200':
+          description: Resultado de la validación (con o sin errores)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Validacion' }
+        '400': { $ref: '#/components/responses/SolicitudInvalida' }
+        '401': { $ref: '#/components/responses/NoAutorizado' }
+        '413': { description: Archivo demasiado grande, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /planillas/enviar:
+    post:
+      tags: [Planillas]
+      operationId: enviarPlanilla
+      summary: Envía oficialmente una planilla ya validada
+      description: |
+        HU-08 y HU-12. Repetir la solicitud con la misma `Idempotency-Key` devuelve el mismo comprobante
+        (200, `repetido: true`) sin crear otro envío. Una validación solo puede enviarse una vez.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Clave única por intento de envío; reutilizarla en los reintentos.
+          schema: { type: string, pattern: '^[A-Za-z0-9_-]{8,128}$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [validacionId]
+              properties:
+                validacionId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Planilla enviada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Envio' }
+        '200':
+          description: Reintento con la misma clave; mismo comprobante
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Envio' }
+        '400': { $ref: '#/components/responses/SolicitudInvalida' }
+        '401': { $ref: '#/components/responses/NoAutorizado' }
+        '404': { description: La validación no existe o es de otra empresa, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '409': { description: La planilla tiene errores o ya fue enviada, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '422': { description: La clave ya se usó para otra planilla, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /cargas:
+    get:
+      tags: [Auditoría]
+      operationId: listarCargas
+      summary: Historial de cargas de la empresa
+      description: HU-11. Más recientes primero; máximo 500.
+      responses:
+        '200':
+          description: Historial
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Carga' }
+        '401': { $ref: '#/components/responses/NoAutorizado' }
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token de /auth/login (modo local) o de Keycloak (modo OAuth2), con el claim `ruc`.
+
+  responses:
+    SolicitudInvalida:
+      description: Datos de la solicitud inválidos
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NoAutorizado:
+      description: Falta el token o no es válido
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
+  schemas:
+    Error:
+      type: object
+      required: [mensaje, codigo]
+      properties:
+        mensaje: { type: string, description: Mensaje en español para el usuario }
+        codigo: { type: string, examples: [solicitud_invalida, no_autorizado, ya_enviada] }
+
+    FilaPlanilla:
+      description: Columnas obligatorias del archivo (encabezados sin importar mayúsculas ni tildes).
+      type: object
+      required: [cedula, nombre, salario, dias_laborados, codigo_ocupacion]
+      properties:
+        cedula: { type: string, examples: ['8-123-456', 'PE-12-345', 'E-8-12345'] }
+        nombre: { type: string }
+        salario: { type: string, pattern: '^\d+(\.\d{1,2})?$', description: 'Mayor que 0, sin símbolo de moneda' }
+        dias_laborados: { type: string, pattern: '^\d+$', description: Entero de 0 a 31 }
+        codigo_ocupacion: { type: string, description: Código del catálogo de ocupaciones }
+
+    ErrorValidacion:
+      type: object
+      required: [fila, campo, valor, problema, solucion]
+      properties:
+        fila: { type: integer, description: Número de fila como en Excel (1 = encabezado) }
+        campo: { type: string }
+        valor: { type: string }
+        problema: { type: string }
+        solucion: { type: string }
+
+    Validacion:
+      type: object
+      required: [id, archivo, periodo, tipo, filas, filasConError, totalSalarios, errores, valida, validadaEn]
+      properties:
+        id: { type: string, format: uuid }
+        archivo: { type: string }
+        periodo: { type: string }
+        tipo: { type: string }
+        filas: { type: integer }
+        filasConError: { type: integer }
+        totalSalarios: { type: number }
+        errores:
+          type: array
+          items: { $ref: '#/components/schemas/ErrorValidacion' }
+        valida: { type: boolean }
+        validadaEn: { type: string, format: date-time }
+
+    Envio:
+      type: object
+      required: [confirmacion, enviadoEn, enviadoPor, validacion, repetido]
+      properties:
+        confirmacion: { type: string, pattern: '^PL-\d{4}-\d{2}-\d{6}$' }
+        enviadoEn: { type: string, format: date-time }
+        enviadoPor: { type: string }
+        validacion: { $ref: '#/components/schemas/Validacion' }
+        repetido: { type: boolean }
+
+    Carga:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        fecha: { type: string, format: date-time }
+        periodo: { type: string }
+        archivo: { type: string }
+        usuario: { type: string }
+        tipo: { type: string, enum: [Pre-validación, Envío oficial] }
+        resultado: { type: string, enum: [Sin errores, Con errores, Enviada] }
+        confirmacion: { type: [string, 'null'] }
+
+security:
+  - bearer: []
