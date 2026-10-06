@@ -1,0 +1,86 @@
+# HU-02: integración continua. Corre en cada push y pull request.
+# Si las pruebas o la puerta de calidad de SonarQube fallan, el check queda en rojo y se bloquea el merge
+# (activar "Require status checks" en la protección de la rama main).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    name: API · pruebas
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: planillas
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-retries 20
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+      - name: Verificar sintaxis
+        run: for f in $(find src scripts test -name '*.js'); do node --check "$f"; done
+      - name: Pruebas con cobertura (memoria y PostgreSQL)
+        run: npm run test:coverage
+        env:
+          TEST_DATABASE_URL: postgres://postgres:test@localhost:5432/planillas
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-api
+          path: api/coverage/lcov.info
+
+  web:
+    name: Portal · pruebas y build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  sonarqube:
+    name: SonarQube · calidad
+    needs: [api, web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: cobertura-api
+          path: api/coverage
+      - name: Revisar si SonarQube está configurado
+        id: sonar
+        run: echo "activo=${{ secrets.SONAR_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+      - name: Análisis de SonarQube
+        if: steps.sonar.outputs.activo == 'true'
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || 'https://sonarcloud.io' }}
+      - name: Aviso si falta configurar SonarQube
+        if: steps.sonar.outputs.activo != 'true'
+        run: echo "::warning::Falta el secreto SONAR_TOKEN; se omitió el análisis de SonarQube."

@@ -1,0 +1,32 @@
+# Entorno local completo: PostgreSQL + API.
+# Uso: docker compose up --build   →  API en http://localhost:3000
+# El portal: cd web && VITE_API_URL=http://localhost:3000 npm run dev
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: planillas
+      POSTGRES_USER: planillas
+      POSTGRES_PASSWORD: planillas
+    ports: ["5432:5432"]
+    volumes: [db-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U planillas"]
+      interval: 2s
+      retries: 20
+
+  api:
+    build: ./api
+    environment:
+      PORT: 3000
+      NODE_ENV: development
+      DATABASE_URL: postgres://planillas:planillas@db:5432/planillas
+      CORS_ORIGIN: http://localhost:5173
+      AUTH_MODE: local
+      JWT_SECRET: solo-para-desarrollo-local
+    ports: ["3000:3000"]
+    depends_on:
+      db: { condition: service_healthy }
+
+volumes:
+  db-data:
