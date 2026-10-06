@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 // Guarda la sesión y la planilla en curso. Se conserva en sessionStorage para que
 // recargar la página no saque al usuario del flujo; se borra al cerrar la pestaña.
@@ -32,6 +32,12 @@ export function SesionProvider({ children }) {
       return nuevo;
     });
   }, []);
+
+  useEffect(() => {
+    const expirar = () => actualizar({ sesion: null, validacion: null, envio: null });
+    window.addEventListener('sesion-expirada', expirar);
+    return () => window.removeEventListener('sesion-expirada', expirar);
+  }, [actualizar]);
 
   const valor = useMemo(
     () => ({
