@@ -28,8 +28,8 @@ VITE_API_URL=http://localhost:3000 npm run dev  # portal en http://localhost:517
 Sin Docker: `cd api && npm install && npm run dev` (almacenamiento en memoria). El portal también funciona solo,
 con una API simulada: `cd web && npm run dev`.
 
-Inicia sesión con cualquier RUC, usuario y contraseña. Para probar, descarga desde "Cargar planilla" la plantilla
-o el ejemplo con errores.
+Inicia sesión con cualquier RUC, usuario y contraseña. Para la demo, usa los botones **Datos de prueba**: "Rellenar
+datos" en el ingreso, y "Cargar planilla correcta" o "Cargar planilla con errores" en la carga.
 
 ## Pruebas
 

@@ -5,6 +5,7 @@ import Aviso from '../components/Aviso.jsx';
 import { Candado } from '../components/Iconos.jsx';
 import { api, modoSimulado } from '../api/client.js';
 import { useSesion } from '../state/Sesion.jsx';
+import { CREDENCIALES_DEMO, MOSTRAR_DEMO } from '../demo.js';
 
 // Pantalla 1 · HU-07
 export default function Ingresar() {
@@ -47,6 +48,14 @@ export default function Ingresar() {
           <h2 id="titulo-ingreso">Iniciar sesión</h2>
           <p className="texto-secundario">Usa las credenciales de tu empresa.</p>
           {error && <Aviso tipo="error">{error}</Aviso>}
+          {MOSTRAR_DEMO && (
+            <div className="demo-barra">
+              <span>Datos de prueba</span>
+              <button type="button" className="boton boton-secundario" onClick={() => setDatos(CREDENCIALES_DEMO)}>
+                Rellenar datos
+              </button>
+            </div>
+          )}
           <form onSubmit={enviar} className="formulario" noValidate>
             <div className="campo">
               <label htmlFor="ruc">RUC de la empresa</label>

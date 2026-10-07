@@ -48,8 +48,6 @@ code { font-family: var(--mono); font-size: 0.85em; color: var(--texto-secundari
 .principal.angosto { max-width: 760px; }
 
 .encabezado { background: var(--azul-marino); color: #fff; }
-.franja { background: var(--azul-profundo); color: var(--texto-claro); font-size: 13px; padding: 6px 24px; }
-.franja-modo { color: var(--dorado); }
 .encabezado-cuerpo.con-acento { border-bottom: 4px solid var(--dorado); }
 .encabezado-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; padding-bottom: 16px; }
 .marca { display: flex; align-items: center; gap: 14px; }
@@ -206,6 +204,12 @@ code { font-family: var(--mono); font-size: 0.85em; color: var(--texto-secundari
 .comprobante-numero .numero { font-size: 28px; letter-spacing: 1px; color: var(--azul-marino); margin-top: 6px; overflow-wrap: anywhere; }
 .comprobante .resumen { text-align: left; }
 .comprobante .acciones { margin-top: 32px; }
+
+/* Atajos de datos de prueba para la presentación (ver src/demo.js) */
+.demo-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px dashed var(--borde-campo); border-radius: var(--radio); background: #fffaf0; font-size: 14px; color: var(--texto-secundario); }
+.demo-barra > span { font-weight: 600; }
+.demo-botones { display: flex; flex-wrap: wrap; gap: 8px; }
+.ingreso-formulario .demo-barra { margin-top: 16px; }
 
 /* Teléfono */
 @media (max-width: 640px) {

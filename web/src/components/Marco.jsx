@@ -1,6 +1,5 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useSesion } from '../state/Sesion.jsx';
-import { modoSimulado } from '../api/client.js';
 import { Escudo } from './Iconos.jsx';
 
 // Encabezado institucional, navegación y pie. "conNavegacion" se apaga en el inicio de sesión.
@@ -19,10 +18,6 @@ export default function Marco({ children, conNavegacion = true, ancho = 'normal'
     <div className="marco">
       <a className="saltar" href="#contenido">Saltar al contenido</a>
       <header className="encabezado">
-        <div className="franja">
-          Prototipo académico · No es un sitio oficial del Estado
-          {modoSimulado && <span className="franja-modo"> · Modo de demostración</span>}
-        </div>
         <div className={`encabezado-cuerpo ${conNavegacion ? '' : 'con-acento'}`}>
           <div className="contenedor encabezado-fila">
             <div className="marca">
