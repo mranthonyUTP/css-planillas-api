@@ -4,8 +4,11 @@ Proyecto académico (UTP, Panamá). Es un portal web y una API para que los empl
 seguridad social antes de enviarla** a la Caja de Seguro Social (CSS). Hoy no existe una API pública de
 validación previa: Mi Caja Digital permite pagar, no pre-validar.
 
-Esto es un **prototipo académico**, no un sistema oficial. La interfaz lo indica en una franja superior y no usa
-el logo real de la CSS. Mantener esa franja.
+Esto es un **prototipo académico**, no un sistema oficial, y no usa el logo real de la CSS. El pie de página lo
+indica. La franja superior "No es un sitio oficial del Estado" se quitó a pedido del equipo para la presentación.
+
+Las pantallas de ingreso y carga tienen botones de **datos de prueba** (`web/src/demo.js`) para la presentación.
+Se ocultan con `VITE_BOTONES_DEMO=false`.
 
 ## Estructura del repositorio
 

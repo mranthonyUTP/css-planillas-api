@@ -8,6 +8,7 @@ import { api, modoSimulado } from '../api/client.js';
 import { useSesion } from '../state/Sesion.jsx';
 import { nombrePeriodo, periodosRecientes } from '../formato.js';
 import { COLUMNAS_OBLIGATORIAS, NOMBRES_CAMPO } from '../validacion/reglas.js';
+import { EJEMPLOS, MOSTRAR_DEMO, cargarEjemplo } from '../demo.js';
 
 const TAMANO_MAXIMO_MB = 5;
 
@@ -31,6 +32,17 @@ export default function Cargar() {
       return;
     }
     setArchivo(f);
+  };
+
+  // Datos de prueba: deja período, tipo y archivo listos para validar.
+  const usarEjemplo = async (nombre) => {
+    try {
+      setPeriodo(periodos[0]);
+      setTipo('Regular');
+      elegir(await cargarEjemplo(nombre));
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const soltar = (e) => {
@@ -109,6 +121,20 @@ export default function Cargar() {
               onChange={(e) => elegir(e.target.files?.[0])}
             />
           </label>
+
+          {MOSTRAR_DEMO && (
+            <div className="demo-barra">
+              <span>Datos de prueba</span>
+              <div className="demo-botones">
+                <button type="button" className="boton boton-secundario" onClick={() => usarEjemplo(EJEMPLOS.correcta)}>
+                  Cargar planilla correcta
+                </button>
+                <button type="button" className="boton boton-secundario" onClick={() => usarEjemplo(EJEMPLOS.conErrores)}>
+                  Cargar planilla con errores
+                </button>
+              </div>
+            </div>
+          )}
 
           {error && <Aviso tipo="error">{error}</Aviso>}
 
