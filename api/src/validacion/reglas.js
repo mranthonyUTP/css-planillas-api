@@ -18,6 +18,9 @@ export const NOMBRES_CAMPO = {
   codigo_ocupacion: 'Código de ocupación',
 };
 
+// HU-14: cada columna tiene una regla que se puede activar o desactivar (ver flags.js).
+export const IDS_REGLAS = COLUMNAS_OBLIGATORIAS;
+
 // Catálogo de ejemplo. El catálogo real lo define la CSS.
 export const CATALOGO_OCUPACIONES = new Set([
   '1120', '2411', '2511', '2512', '3313', '3322', '4110', '4120', '4311', '5223', '5414', '7112', '8322', '9112',
@@ -37,24 +40,28 @@ export function validarEncabezados(encabezados) {
   }));
 }
 
-export function validarRegistro(registro, numeroFila) {
+export function validarRegistro(registro, numeroFila, activas = new Set(IDS_REGLAS)) {
   const errores = [];
   const agregar = (campo, valor, problema, solucion) =>
     errores.push({ fila: numeroFila, campo: NOMBRES_CAMPO[campo], valor: valor === '' ? '(vacío)' : valor, problema, solucion });
 
   const cedula = registro.cedula ?? '';
-  if (cedula === '') {
+  if (!activas.has('cedula')) {
+    // regla desactivada por feature flag
+  } else if (cedula === '') {
     agregar('cedula', cedula, 'Este campo es obligatorio.', 'Escribe la cédula del trabajador, por ejemplo 8-123-456.');
   } else if (!PATRON_CEDULA.test(cedula.toUpperCase())) {
     agregar('cedula', cedula, 'La cédula no tiene un formato válido.', 'Usa el formato provincia-tomo-asiento, por ejemplo 8-123-456.');
   }
 
-  if ((registro.nombre ?? '') === '') {
+  if (activas.has('nombre') && (registro.nombre ?? '') === '') {
     agregar('nombre', '', 'Este campo es obligatorio.', 'Escribe el nombre completo del trabajador.');
   }
 
   const salario = registro.salario ?? '';
-  if (salario === '') {
+  if (!activas.has('salario')) {
+    // regla desactivada por feature flag
+  } else if (salario === '') {
     agregar('salario', salario, 'Este campo es obligatorio.', 'Escribe el salario del período, sin símbolo de moneda.');
   } else if (!/^\d+(\.\d{1,2})?$/.test(salario)) {
     agregar('salario', salario, 'El salario debe ser un número.', 'Escribe solo el número, con punto decimal. Ejemplo: 1250.00');
@@ -63,14 +70,18 @@ export function validarRegistro(registro, numeroFila) {
   }
 
   const dias = registro.dias_laborados ?? '';
-  if (dias === '') {
+  if (!activas.has('dias_laborados')) {
+    // regla desactivada por feature flag
+  } else if (dias === '') {
     agregar('dias_laborados', dias, 'Este campo es obligatorio.', 'Indica un número entre 0 y 31.');
   } else if (!/^\d+$/.test(dias) || Number(dias) > 31) {
     agregar('dias_laborados', dias, 'El mes no puede tener más de 31 días.', 'Indica un número entero entre 0 y 31.');
   }
 
   const codigo = registro.codigo_ocupacion ?? '';
-  if (codigo === '') {
+  if (!activas.has('codigo_ocupacion')) {
+    // regla desactivada por feature flag
+  } else if (codigo === '') {
     agregar('codigo_ocupacion', codigo, 'Este campo es obligatorio.', 'Escribe el código de ocupación del trabajador.');
   } else if (!CATALOGO_OCUPACIONES.has(codigo)) {
     agregar('codigo_ocupacion', codigo, 'El código no existe en el catálogo.', 'Busca el código correcto en la especificación de campos.');
@@ -80,7 +91,7 @@ export function validarRegistro(registro, numeroFila) {
 }
 
 // Valida una planilla ya leída. Las filas se numeran como en Excel: la 1 es el encabezado.
-export function validarPlanilla({ encabezados, registros }) {
+export function validarPlanilla({ encabezados, registros }, activas = new Set(IDS_REGLAS)) {
   const erroresEncabezado = validarEncabezados(encabezados);
   if (erroresEncabezado.length > 0) {
     return { errores: erroresEncabezado, filas: registros.length, filasConError: 0, totalSalarios: 0 };
@@ -95,7 +106,7 @@ export function validarPlanilla({ encabezados, registros }) {
     };
   }
 
-  const errores = registros.flatMap((r, i) => validarRegistro(r, i + 2));
+  const errores = registros.flatMap((r, i) => validarRegistro(r, i + 2, activas));
   const filasConError = new Set(errores.map((e) => e.fila)).size;
   const totalSalarios = registros.reduce((s, r) => s + (Number(r.salario) || 0), 0);
   return { errores, filas: registros.length, filasConError, totalSalarios };

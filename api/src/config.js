@@ -1,4 +1,5 @@
 // Configuración por variables de entorno. Ver api/.env.example.
+import { reglasActivas } from './validacion/flags.js';
 const env = process.env;
 
 export const config = {
@@ -18,6 +19,8 @@ export const config = {
   oidcAudience: env.OIDC_AUDIENCE ?? '',
   // Límite del archivo de planilla.
   tamanoMaximoMb: Number(env.MAX_FILE_MB ?? 5),
+  // HU-14: reglas desactivadas (ids separados por comas). Ejemplo: REGLAS_DESACTIVADAS=codigo_ocupacion
+  reglasDesactivadas: (env.REGLAS_DESACTIVADAS ?? '').split(',').map((s) => s.trim()).filter(Boolean),
   nivelLog: env.LOG_LEVEL ?? 'info',
 };
 
@@ -25,6 +28,7 @@ export function validarConfig() {
   if (config.entorno === 'production' && config.authModo === 'local' && config.jwtSecret.startsWith('solo-para')) {
     throw new Error('JWT_SECRET debe definirse en producción.');
   }
+  reglasActivas(config.reglasDesactivadas); // falla si hay un id desconocido
   if (config.authModo === 'oidc' && !config.oidcIssuer) {
     throw new Error('AUTH_MODE=oidc requiere OIDC_ISSUER.');
   }

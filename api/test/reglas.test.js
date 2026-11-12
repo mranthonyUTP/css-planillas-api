@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { leerCsv } from '../src/validacion/lector.js';
 import { validarPlanilla, validarRegistro } from '../src/validacion/reglas.js';
+import { reglasActivas } from '../src/validacion/flags.js';
 
 const valido = { cedula: '8-123-456', nombre: 'María Ríos', salario: '1250.00', dias_laborados: '30', codigo_ocupacion: '2411' };
 
@@ -49,4 +50,20 @@ test('numera las filas como en Excel y suma salarios', () => {
   assert.equal(resultado.filasConError, 1);
   assert.equal(resultado.errores[0].fila, 3);
   assert.equal(resultado.totalSalarios, 300.5);
+});
+
+// HU-14: feature flags de las reglas.
+test('con todas las reglas activas por defecto, rechaza un código fuera del catálogo', () => {
+  assert.equal(validarRegistro({ ...valido, codigo_ocupacion: 'X99' }, 2, reglasActivas()).length, 1);
+});
+
+test('una regla desactivada no reporta errores y las demás siguen activas', () => {
+  const activas = reglasActivas(['codigo_ocupacion']);
+  const registro = { ...valido, codigo_ocupacion: 'X99', dias_laborados: '40' };
+  const errores = validarRegistro(registro, 2, activas);
+  assert.deepEqual(errores.map((e) => e.campo), ['Días laborados']);
+});
+
+test('reglasActivas rechaza ids desconocidos', () => {
+  assert.throws(() => reglasActivas(['no_existe']), /desconocidas: no_existe/);
 });

@@ -8,7 +8,8 @@ import { config } from './config.js';
 import { login, requiereAuth } from './auth.js';
 import { ErrorApi, solicitudInvalida, noEncontrado } from './errores.js';
 import { leerPlanilla } from './validacion/lector.js';
-import { validarPlanilla } from './validacion/reglas.js';
+import { validarPlanilla, NOMBRES_CAMPO } from './validacion/reglas.js';
+import { reglasActivas } from './validacion/flags.js';
 
 const PERIODO = /^\d{4}-(0[1-9]|1[0-2])$/;
 const TIPOS = new Set(['Regular', 'Complementaria']);
@@ -18,7 +19,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // Quita datos internos antes de responder.
 const publica = ({ empresaRuc, usuario, ...v }) => v;
 
-export function crearApp({ store, logger }) {
+export function crearApp({ store, logger, reglasDesactivadas = config.reglasDesactivadas }) {
+  const activas = reglasActivas(reglasDesactivadas);
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
@@ -39,6 +41,11 @@ export function crearApp({ store, logger }) {
   // HU-07
   app.post('/auth/login', login);
 
+  // HU-14: estado de los feature flags de las reglas de validación.
+  app.get('/reglas', requiereAuth, (_req, res) => {
+    res.json([...Object.entries(NOMBRES_CAMPO)].map(([id, campo]) => ({ id, campo, activa: activas.has(id) })));
+  });
+
   // HU-05 y HU-06: pre-validación. No registra la planilla, solo la auditoría de la carga.
   app.post('/planillas/validar', requiereAuth, subida.single('archivo'), async (req, res) => {
     const { periodo, tipo } = req.body ?? {};
@@ -47,7 +54,7 @@ export function crearApp({ store, logger }) {
     if (!TIPOS.has(tipo)) throw solicitudInvalida('El tipo de planilla debe ser Regular o Complementaria.');
 
     const archivo = req.file.originalname.slice(0, 200);
-    const resultado = validarPlanilla(await leerPlanilla(archivo, req.file.buffer));
+    const resultado = validarPlanilla(await leerPlanilla(archivo, req.file.buffer), activas);
     const validacion = {
       id: randomUUID(),
       empresaRuc: req.usuario.ruc,

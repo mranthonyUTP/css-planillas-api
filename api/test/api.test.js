@@ -154,3 +154,41 @@ for (const [nombre, crearStore] of almacenes) {
     });
   });
 }
+
+// HU-14: con una regla desactivada por feature flag, la planilla pasa y /reglas lo refleja.
+describe('HU-14: feature flags de reglas', () => {
+  let servidor;
+  let base;
+  before(() => {
+    servidor = crearApp({ store: crearStoreMemoria(), reglasDesactivadas: ['codigo_ocupacion', 'dias_laborados'] }).listen(0);
+    base = `http://localhost:${servidor.address().port}`;
+  });
+  after(() => servidor.close());
+
+  const token = async () => {
+    const r = await fetch(`${base}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ruc: 'RUC-flags', usuario: 'contabilidad', clave: 'demo' }),
+    });
+    return (await r.json()).token;
+  };
+
+  test('GET /reglas exige token y lista el estado de cada regla', async () => {
+    assert.equal((await fetch(`${base}/reglas`)).status, 401);
+    const reglas = await (await fetch(`${base}/reglas`, { headers: { Authorization: `Bearer ${await token()}` } })).json();
+    assert.equal(reglas.length, 5);
+    assert.deepEqual(reglas.filter((r) => !r.activa).map((r) => r.id), ['dias_laborados', 'codigo_ocupacion']);
+  });
+
+  test('una planilla que solo falla en reglas desactivadas pasa la pre-validación', async () => {
+    const form = new FormData();
+    form.append('archivo', new Blob(['cedula,nombre,salario,dias_laborados,codigo_ocupacion\n8-123-456,Ana Ríos,1250.00,32,X99\n']), 'p.csv');
+    form.append('periodo', '2026-10');
+    form.append('tipo', 'Regular');
+    const r = await fetch(`${base}/planillas/validar`, { method: 'POST', headers: { Authorization: `Bearer ${await token()}` }, body: form });
+    const v = await r.json();
+    assert.equal(v.valida, true);
+    assert.equal(v.errores.length, 0);
+  });
+});
