@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -6,24 +6,33 @@ import multer from 'multer';
 import { pinoHttp } from 'pino-http';
 import { config } from './config.js';
 import { login, requiereAuth } from './auth.js';
-import { ErrorApi, solicitudInvalida, noEncontrado } from './errores.js';
+import { ErrorApi, solicitudInvalida, noEncontrado, noAutorizado } from './errores.js';
 import { leerPlanilla } from './validacion/lector.js';
 import { validarPlanilla, NOMBRES_CAMPO } from './validacion/reglas.js';
 import { reglasActivas } from './validacion/flags.js';
+import { crearMetricas } from './metricas.js';
 
 const PERIODO = /^\d{4}-(0[1-9]|1[0-2])$/;
 const TIPOS = new Set(['Regular', 'Complementaria']);
 const CLAVE_IDEMPOTENCIA = /^[A-Za-z0-9_-]{8,128}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Compara el token en tiempo constante.
+function tokenValido(cabecera, esperado) {
+  const a = Buffer.from(cabecera);
+  const b = Buffer.from(`Bearer ${esperado}`);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 // Quita datos internos antes de responder.
 const publica = ({ empresaRuc, usuario, ...v }) => v;
 
-export function crearApp({ store, logger, reglasDesactivadas = config.reglasDesactivadas }) {
+export function crearApp({ store, logger, reglasDesactivadas = config.reglasDesactivadas, metricas = crearMetricas(), tokenMetricas = config.metricasToken }) {
   const activas = reglasActivas(reglasDesactivadas);
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
+  app.use(metricas.middleware);
   app.use(helmet());
   app.use(cors({ origin: config.origenesPermitidos, allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key'] }));
   app.use(express.json({ limit: '10kb' }));
@@ -37,6 +46,13 @@ export function crearApp({ store, logger, reglasDesactivadas = config.reglasDesa
   });
 
   app.get('/salud', (_req, res) => res.json({ estado: 'ok', almacenamiento: store.tipo }));
+
+  // HU-17: métricas en formato Prometheus. Deshabilitado si no hay METRICS_TOKEN.
+  app.get('/metricas', (req, res, next) => {
+    if (!tokenMetricas) return next(noEncontrado('Ruta no encontrada.'));
+    if (!tokenValido(req.get('authorization') ?? '', tokenMetricas)) throw noAutorizado('Token de métricas inválido.');
+    res.type('text/plain; version=0.0.4').send(metricas.exponer({ almacenamiento: store.tipo }));
+  });
 
   // HU-07
   app.post('/auth/login', login);

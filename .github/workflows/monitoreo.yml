@@ -1,0 +1,24 @@
+# HU-17: monitoreo externo de staging. Cada 15 minutos revisa que la API responda y que sus rutas
+# principales se comporten. Si falla, el workflow falla y GitHub avisa por correo a quien lo mantiene.
+# Requiere la variable STAGING_API_URL (la misma de deploy-staging.yml).
+name: Monitoreo de staging
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  disponibilidad:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Pruebas de humo contra staging
+        working-directory: api
+        run: npm run smoke
+        env:
+          BASE_URL: ${{ vars.STAGING_API_URL }}
