@@ -15,7 +15,7 @@ Se ocultan con `VITE_BOTONES_DEMO=false`.
 ```
 /web    Frontend: React + Vite + React Router (JavaScript, sin TypeScript)
 /api    Backend: Node.js + Express 5. Contrato en api/openapi.yaml (HU-04)
-/docs   errores-frecuentes.md (HU-01) y modelo-amenazas.md (HU-03)
+/docs   errores-frecuentes.md (HU-01), modelo-amenazas.md (HU-03) y trazabilidad.md (HU -> sprint -> código -> pruebas)
 /.github/workflows  ci.yml (HU-02, SonarQube) y deploy-staging.yml (HU-10, Render + pruebas de humo)
 docker-compose.yml  PostgreSQL + API para desarrollo local
 render.yaml         Infraestructura de staging (Render Blueprint)
@@ -46,6 +46,8 @@ solo ve los datos de su RUC. Con `AUTH_MODE=oidc` + `OIDC_ISSUER` la API valida 
   `UNIQUE (empresa_ruc, idempotency_key)` y `UNIQUE (validacion_id)`.
 - Las reglas viven en `api/src/validacion/reglas.js`. `web/src/validacion/reglas.js` es una copia para el modo
   simulado: **si cambias una regla, cambia ambas**.
+- HU-14: `REGLAS_DESACTIVADAS=codigo_ocupacion,...` apaga reglas por columna (ids en `IDS_REGLAS`). Solo afecta a la API; el modo simulado del portal no tiene flags.
+- HU-17: `src/metricas.js` (contadores en memoria), `src/alertas.js` (umbrales `ALERTA_*`, webhook opcional) y `monitoreo.yml` (pruebas de humo cada 15 min).
 - Pruebas: `node --test` con `fetch` nativo contra la app levantada en un puerto libre (sin Supertest).
 
 ## Tecnologías definidas
@@ -100,7 +102,9 @@ HU-04 y el staging de HU-10.
 | `POST /planillas/validar` | Pre-validación sin registrar. `multipart/form-data`: `archivo`, `periodo`, `tipo` | HU-05, HU-06 |
 | `POST /planillas/enviar` | Envío oficial de una validación exitosa. Cabecera `Idempotency-Key` | HU-08, HU-12 |
 | `GET /cargas` | Historial de cargas de la empresa | HU-11 |
+| `GET /reglas` | Estado de los feature flags de las reglas | HU-14 |
 | `GET /salud` | Estado del servicio (pruebas de humo) | HU-10 |
+| `GET /metricas` | Métricas Prometheus; exige `METRICS_TOKEN` (404 si no está definido) | HU-17 |
 
 Formato de error de validación: `{ fila, campo, valor, problema, solucion }`. Errores de la API: `{ mensaje, codigo }`.
 El cliente está en `web/src/api/`. Con `VITE_API_URL` vacío usa el mock (`mock.js`); con una URL usa la API real.
@@ -131,3 +135,4 @@ Seis pantallas: 1 Inicio de sesión, 2 Cargar planilla, 3 Resultado (errores), 4
 - Interfaz y mensajes en español de Panamá; moneda B/.
 - Commits en español, en modo imperativo y cortos.
 - Una historia de usuario es una sola tarea; referenciar su ID (`HU-05`) en commits y PRs.
+- Al cerrar una HU, actualizar su fila en `docs/trazabilidad.md` en el mismo PR.
