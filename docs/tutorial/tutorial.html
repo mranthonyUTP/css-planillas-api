@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorial: css-planillas-api</title>
+  <style>
+:root {
+  --marino: #0B2E59; --accion: #0B4F9C; --dorado: #F2B632;
+  --fondo: #F4F6F9; --texto: #1B2430; --texto2: #4A5565;
+  --ok: #1E6B3A; --error: #A4262C; --borde: #D5DCE6; --blanco: #fff;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--fondo); color: var(--texto);
+  font: 16px/1.55 "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.contenedor { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+code { font-family: var(--mono); font-size: .88em; background: #E8EDF4; padding: 1px 5px; border-radius: 4px; }
+
+/* Cabecera */
+.cabecera { background: var(--marino); color: var(--blanco); padding: 28px 0 24px; border-bottom: 4px solid var(--dorado); }
+.etiqueta { margin: 0 0 6px; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--dorado); }
+h1 { margin: 0 0 8px; font-size: clamp(1.5rem, 5vw, 2.1rem); line-height: 1.2; }
+h1 em { font-style: normal; color: var(--dorado); }
+.sub { margin: 0; opacity: .85; }
+
+/* Pestañas */
+.pestanas { background: var(--blanco); border-bottom: 1px solid var(--borde); position: sticky; top: 0; z-index: 5; }
+.pestanas .contenedor { display: flex; gap: 4px; overflow-x: auto; }
+[role=tab] {
+  flex: 0 0 auto; min-height: 48px; padding: 0 14px; border: 0; background: none; cursor: pointer;
+  font: inherit; font-weight: 600; color: var(--texto2); border-bottom: 3px solid transparent;
+}
+[role=tab][aria-selected=true] { color: var(--accion); border-bottom-color: var(--accion); }
+:focus-visible { outline: 3px solid var(--dorado); outline-offset: 2px; }
+
+main { padding-top: 20px; padding-bottom: 24px; }
+section { animation: entrar .35s ease; }
+@keyframes entrar { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+h2 { margin: 8px 0 8px; font-size: 1.35rem; color: var(--marino); }
+h3 { margin: 0 0 6px; font-size: 1rem; }
+.nota { color: var(--texto2); font-size: .92rem; }
+
+/* Botones */
+.btn {
+  min-height: 44px; padding: 0 18px; border-radius: 8px; border: 2px solid var(--accion);
+  background: var(--accion); color: var(--blanco); font: inherit; font-weight: 600; cursor: pointer;
+}
+.btn:hover { filter: brightness(1.1); }
+.btn.sec { background: var(--blanco); color: var(--accion); }
+.btn.sec.activo { background: var(--accion); color: var(--blanco); }
+.btn.grande { width: 100%; margin: 14px 0; }
+.btn:disabled { opacity: .4; cursor: default; }
+
+/* 1 · Carriles animados */
+.carril { background: var(--blanco); border: 1px solid var(--borde); border-radius: 12px; padding: 14px; margin: 12px 0; }
+.carril.malo { border-left: 5px solid var(--error); }
+.carril.bueno { border-left: 5px solid var(--ok); }
+.cadena { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cadena li {
+  background: #E8EDF4; border-radius: 999px; padding: 8px 14px; font-size: .92rem; font-weight: 600;
+  opacity: 0; animation: aparece .5s ease forwards;
+}
+.cadena li:not(:last-child)::after { content: "→"; margin-left: 10px; color: var(--texto2); }
+.cadena li:nth-child(1) { animation-delay: .1s; } .cadena li:nth-child(2) { animation-delay: .6s; }
+.cadena li:nth-child(3) { animation-delay: 1.1s; } .cadena li:nth-child(4) { animation-delay: 1.6s; }
+.cadena .falla { background: #F8E1E2; color: var(--error); animation-name: aparece, temblar; animation-duration: .5s, .5s; animation-delay: 1.1s, 1.6s; }
+.cadena .nuevo { background: #FFF3D1; }
+.cadena .ok { background: #DDF1E4; color: var(--ok); }
+@keyframes aparece { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: none; } }
+@keyframes temblar { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+/* 2 · Teléfono */
+.telefono {
+  width: min(320px, 100%); margin: 16px auto 8px; background: var(--blanco); border: 3px solid var(--marino);
+  border-radius: 22px; overflow: hidden; box-shadow: 0 8px 24px rgba(11,46,89,.18);
+}
+.barra { background: var(--marino); color: var(--blanco); padding: 10px 14px; font-weight: 600; font-size: .9rem; border-bottom: 3px solid var(--dorado); }
+.pantalla { padding: 14px; min-height: 250px; font-size: .88rem; animation: entrar .3s ease; }
+.pantalla label { display: block; color: var(--texto2); font-size: .78rem; margin-top: 8px; }
+.campo { border: 1px solid var(--borde); border-radius: 6px; padding: 8px 10px; background: var(--fondo); min-height: 36px; }
+.mini-btn { display: block; margin-top: 14px; text-align: center; background: var(--accion); color: #fff; border-radius: 6px; padding: 10px; font-weight: 600; }
+.mini-btn.ok { background: var(--ok); }
+.fila-err { background: #FBEBEC; border-left: 4px solid var(--error); padding: 6px 8px; margin-top: 8px; border-radius: 4px; font-size: .8rem; }
+.fila-err b { color: var(--error); }
+.codigo { font-family: var(--mono); font-size: 1.25rem; text-align: center; background: #DDF1E4; color: var(--ok); border-radius: 8px; padding: 14px 8px; margin: 14px 0; letter-spacing: .04em; }
+.visto { text-align: center; font-size: 2.2rem; color: var(--ok); animation: pop .5s ease; }
+@keyframes pop { 0% { transform: scale(0); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.item-hist { display: flex; justify-content: space-between; border-bottom: 1px solid var(--borde); padding: 8px 0; }
+.etq { font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.etq.ok { background: #DDF1E4; color: var(--ok); } .etq.mal { background: #F8E1E2; color: var(--error); }
+.pie-pantalla { text-align: center; min-height: 3em; color: var(--texto2); margin: 8px 0; }
+.controles { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.puntos { display: flex; gap: 6px; }
+.puntos i { width: 9px; height: 9px; border-radius: 50%; background: var(--borde); transition: .2s; }
+.puntos i.on { background: var(--accion); transform: scale(1.3); }
+
+/* 3 · Demo */
+.selector { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.selector .btn { flex: 1 1 160px; }
+.tabla-envoltura { overflow-x: auto; background: var(--blanco); border: 1px solid var(--borde); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: .8rem; }
+th, td { padding: 8px 10px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--borde); }
+th { background: #E8EDF4; color: var(--marino); }
+td.mal { background: #F8E1E2; color: var(--error); font-weight: 700; }
+td.bien { background: #DDF1E4; }
+#resultado .caja { border-radius: 10px; padding: 14px; animation: entrar .35s ease; }
+.caja.exito { background: #DDF1E4; border: 1px solid var(--ok); color: var(--ok); }
+.caja.fallo { background: #FBEBEC; border: 1px solid var(--error); }
+.caja.fallo h3 { color: var(--error); }
+.error-item { background: var(--blanco); border-left: 4px solid var(--error); border-radius: 6px; padding: 8px 10px; margin-top: 8px; font-size: .9rem; }
+.error-item small { display: block; color: var(--texto2); }
+details { margin-top: 12px; background: var(--blanco); border: 1px solid var(--borde); border-radius: 10px; padding: 10px 14px; }
+summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+.reglas { padding-left: 18px; }
+
+/* 4 · Equipo */
+.lista { list-style: none; padding: 0; margin: 12px 0 20px; }
+.lista li { background: var(--blanco); border: 1px solid var(--borde); border-radius: 10px; margin-bottom: 8px; }
+.lista label { display: flex; gap: 12px; align-items: flex-start; padding: 12px; min-height: 44px; cursor: pointer; }
+.lista input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--ok); flex: none; }
+.lista input:checked + span { text-decoration: line-through; color: var(--texto2); }
+.tarjetas { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.tarjeta { background: var(--blanco); border: 1px solid var(--borde); border-top: 4px solid var(--dorado); border-radius: 10px; padding: 12px; }
+.tarjeta span { font-size: 1.4rem; }
+.tarjeta p { margin: 0; font-size: .92rem; color: var(--texto2); }
+.pie { padding-bottom: 32px; color: var(--texto2); font-size: .85rem; text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .cadena li { opacity: 1; }
+}
+</style>
+</head>
+<body>
+  <header class="cabecera">
+    <div class="contenedor">
+      <p class="etiqueta">Prototipo académico · UTP</p>
+      <h1>Valida tu planilla <em>antes</em> de enviarla</h1>
+      <p class="sub">Tutorial de 4 pasos para el equipo nuevo. Toca cada pestaña.</p>
+    </div>
+  </header>
+
+  <nav class="pestanas" aria-label="Secciones del tutorial">
+    <div class="contenedor" role="tablist">
+      <button role="tab" aria-selected="true"  aria-controls="p1" id="t1">1 · El problema</button>
+      <button role="tab" aria-selected="false" aria-controls="p2" id="t2" tabindex="-1">2 · El flujo</button>
+      <button role="tab" aria-selected="false" aria-controls="p3" id="t3" tabindex="-1">3 · Pruébalo</button>
+      <button role="tab" aria-selected="false" aria-controls="p4" id="t4" tabindex="-1">4 · Tu equipo</button>
+    </div>
+  </nav>
+
+  <main class="contenedor">
+
+    <!-- 1 PROBLEMA -->
+    <section id="p1" role="tabpanel" aria-labelledby="t1">
+      <h2>¿Qué problema resolvemos?</h2>
+      <p>Hoy, <strong>Mi Caja Digital permite pagar</strong> la planilla, pero no revisarla antes. Los errores aparecen tarde.</p>
+
+      <div class="carril malo">
+        <h3>Hoy</h3>
+        <ol class="cadena">
+          <li>Preparas el archivo</li>
+          <li>Lo envías</li>
+          <li class="falla">Error… ¡tarde!</li>
+        </ol>
+      </div>
+      <div class="carril bueno">
+        <h3>Con nuestro portal</h3>
+        <ol class="cadena">
+          <li>Preparas el archivo</li>
+          <li class="nuevo">Validas</li>
+          <li class="nuevo">Corriges</li>
+          <li class="ok">Envías</li>
+        </ol>
+      </div>
+      <p class="nota">Es un <strong>prototipo</strong>, no un sistema oficial de la CSS. No usa su logo.</p>
+    </section>
+
+    <!-- 2 FLUJO -->
+    <section id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+      <h2>Las 6 pantallas</h2>
+      <p>Usa los botones para recorrer el flujo de principio a fin.</p>
+
+      <div class="telefono" aria-live="polite">
+        <div class="barra"><span id="pantallaTitulo"></span></div>
+        <div class="pantalla" id="pantallaCuerpo"></div>
+      </div>
+      <p class="pie-pantalla" id="pantallaTexto"></p>
+
+      <div class="controles">
+        <button class="btn sec" id="ant">← Anterior</button>
+        <span class="puntos" id="puntos" aria-hidden="true"></span>
+        <button class="btn" id="sig">Siguiente →</button>
+      </div>
+    </section>
+
+    <!-- 3 PRUEBALO -->
+    <section id="p3" role="tabpanel" aria-labelledby="t3" hidden>
+      <h2>Prueba la validación</h2>
+      <p>Elige una planilla de ejemplo y toca <strong>Validar</strong>. Así se ve el <em>flujo feliz</em> y el <em>flujo con errores</em>.</p>
+
+      <div class="selector">
+        <button class="btn sec activo" data-caso="correcta">✔ Planilla correcta</button>
+        <button class="btn sec" data-caso="errores">✖ Planilla con errores</button>
+      </div>
+
+      <div class="tabla-envoltura">
+        <table id="tabla">
+          <thead><tr><th>#</th><th>cédula</th><th>nombre</th><th>salario</th><th>días</th><th>ocupación</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <button class="btn grande" id="validar">Validar planilla</button>
+      <div id="resultado" role="status" aria-live="polite"></div>
+
+      <details>
+        <summary>¿Qué reglas se aplican?</summary>
+        <ul class="reglas">
+          <li><strong>Cédula:</strong> formato panameño (<code>8-123-456</code>, <code>PE-12-345</code>, <code>E-8-12345</code>).</li>
+          <li><strong>Salario:</strong> número mayor que 0, sin símbolo de moneda.</li>
+          <li><strong>Días laborados:</strong> entero entre 0 y 31.</li>
+          <li><strong>Código de ocupación:</strong> dentro del catálogo.</li>
+        </ul>
+        <p class="nota">Son reglas de ejemplo. Falta confirmarlas con la normativa de la CSS (HU-01).</p>
+      </details>
+    </section>
+
+    <!-- 4 EQUIPO -->
+    <section id="p4" role="tabpanel" aria-labelledby="t4" hidden>
+      <h2>Para empezar hoy</h2>
+      <p>Marca cada paso cuando lo termines (se guarda en tu navegador).</p>
+
+      <ul class="lista" id="checklist"></ul>
+
+      <h2>Cuatro cosas que no se olvidan</h2>
+      <div class="tarjetas">
+        <div class="tarjeta"><span>⚠️</span><h3>Reglas duplicadas</h3><p>Si cambias <code>api/…/reglas.js</code>, cambia también <code>web/…/reglas.js</code>.</p></div>
+        <div class="tarjeta"><span>🚫</span><h3>Sin Jest ni Supertest</h3><p>Las pruebas usan <code>node --test</code>. Katalon cubre la API.</p></div>
+        <div class="tarjeta"><span>🏷️</span><h3>Una HU por tarea</h3><p>Pon el ID (<code>HU-05</code>) en commits y PRs.</p></div>
+        <div class="tarjeta"><span>📋</span><h3>Trazabilidad</h3><p>Al cerrar una HU, actualiza <code>docs/trazabilidad.md</code> en el mismo PR.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="contenedor pie">
+    Prototipo académico · No es un sitio oficial del Estado · Detalle completo en <code>CLAUDE.md</code>
+  </footer>
+
+  <script>
+'use strict';
+
+/* ---------- Pestañas ---------- */
+const pestanas = [...document.querySelectorAll('[role=tab]')];
+function abrir(i) {
+  pestanas.forEach((t, k) => {
+    const activa = k === i;
+    t.setAttribute('aria-selected', activa);
+    t.tabIndex = activa ? 0 : -1;
+    document.getElementById(t.getAttribute('aria-controls')).hidden = !activa;
+  });
+  pestanas[i].scrollIntoView({ inline: 'center', block: 'nearest' });
+  window.scrollTo({ top: 0 });
+}
+pestanas.forEach((t, i) => {
+  t.addEventListener('click', () => abrir(i));
+  t.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') { abrir((i + 1) % 4); pestanas[(i + 1) % 4].focus(); }
+    if (e.key === 'ArrowLeft') { abrir((i + 3) % 4); pestanas[(i + 3) % 4].focus(); }
+  });
+});
+
+/* ---------- 2 · Las 6 pantallas ---------- */
+const PANTALLAS = [
+  { t: '1 · Inicio de sesión',
+    txt: 'El empleador entra con su RUC, usuario y contraseña. Cada token solo ve los datos de su RUC.',
+    html: '<label>RUC</label><div class="campo">155123456-2-2020</div><label>Usuario</label><div class="campo">ana.contabilidad</div><label>Contraseña</label><div class="campo">••••••••</div><span class="mini-btn">Ingresar</span>' },
+  { t: '2 · Cargar planilla',
+    txt: 'Sube el archivo CSV o Excel e indica el período y el tipo de planilla.',
+    html: '<label>Período</label><div class="campo">Octubre 2026</div><label>Tipo</label><div class="campo">Regular</div><label>Archivo</label><div class="campo">📄 planilla_octubre.csv</div><span class="mini-btn">Validar</span>' },
+  { t: '3 · Resultado',
+    txt: 'Si hay errores, se listan por fila, campo y motivo, con la solución. Corriges y vuelves a validar.',
+    html: '<b>2 errores encontrados</b><div class="fila-err"><b>Fila 3 · Cédula</b><br>Formato inválido. Usa 8-123-456.</div><div class="fila-err"><b>Fila 5 · Días laborados</b><br>Máximo 31 días.</div><span class="mini-btn">Corregir y volver a validar</span>' },
+  { t: '4 · Confirmar envío',
+    txt: 'Solo una validación exitosa se puede enviar. El envío lleva una clave de idempotencia para no duplicarse.',
+    html: '<div class="visto">✔</div><p style="text-align:center;margin:4px 0"><b>Sin errores</b><br>12 trabajadores · B/. 14,250.00</p><span class="campo">☑ Confirmo que los datos son correctos</span><span class="mini-btn ok">Enviar planilla</span>' },
+  { t: '5 · Comprobante',
+    txt: 'Recibes un número de confirmación. Si repites el envío, no se duplica.',
+    html: '<div class="visto">✔</div><p style="text-align:center;margin:4px 0"><b>Planilla enviada</b></p><div class="codigo">CSS-2026-00481</div><span class="mini-btn">Descargar comprobante</span>' },
+  { t: '6 · Historial',
+    txt: 'Todas las cargas de la empresa quedan registradas (log de auditoría).',
+    html: '<div class="item-hist"><span>Oct 2026</span><span class="etq ok">Enviada</span></div><div class="item-hist"><span>Oct 2026</span><span class="etq mal">Con errores</span></div><div class="item-hist"><span>Sep 2026</span><span class="etq ok">Enviada</span></div><div class="item-hist"><span>Ago 2026</span><span class="etq ok">Enviada</span></div>' },
+];
+let actual = 0;
+const $ = (id) => document.getElementById(id);
+$('puntos').innerHTML = PANTALLAS.map(() => '<i></i>').join('');
+function pintarPantalla() {
+  const p = PANTALLAS[actual];
+  $('pantallaTitulo').textContent = p.t;
+  const cuerpo = $('pantallaCuerpo');
+  cuerpo.innerHTML = p.html;
+  cuerpo.style.animation = 'none'; void cuerpo.offsetWidth; cuerpo.style.animation = '';
+  $('pantallaTexto').textContent = p.txt;
+  [...$('puntos').children].forEach((d, i) => d.classList.toggle('on', i === actual));
+  $('ant').disabled = actual === 0;
+  $('sig').disabled = actual === PANTALLAS.length - 1;
+}
+$('ant').onclick = () => { actual--; pintarPantalla(); };
+$('sig').onclick = () => { actual++; pintarPantalla(); };
+pintarPantalla();
+
+/* ---------- 3 · Validación de ejemplo (misma lógica que reglas.js) ---------- */
+const CATALOGO = new Set(['1120','2411','2511','2512','3313','3322','4110','4120','4311','5223','5414','7112','8322','9112']);
+const CEDULA = /^(?:(?:[1-9]|1[0-3])(?:AV|PI)?|PE|E|N)-\d{1,4}-\d{1,6}$/;
+
+const CASOS = {
+  correcta: [
+    ['8-123-456', 'Ana Pérez', '1250.00', '30', '2411'],
+    ['PE-12-345', 'Luis Gómez', '980.50', '28', '4110'],
+    ['E-8-12345', 'Marta Díaz', '1500.00', '30', '5223'],
+  ],
+  errores: [
+    ['8-123-456', 'Ana Pérez', '1250.00', '30', '2411'],
+    ['8123456', 'Luis Gómez', '980.50', '28', '4110'],
+    ['PE-12-345', 'Marta Díaz', '-50', '30', '5223'],
+    ['3-45-678', 'José Ruiz', '1100.00', '35', '4120'],
+    ['9-88-1234', 'Rosa Vega', '900.00', '30', '9999'],
+  ],
+};
+const CAMPOS = ['cedula', 'nombre', 'salario', 'días', 'ocupación'];
+
+function validarFila(f) {
+  const [ced, nom, sal, dia, ocu] = f, e = [];
+  if (!CEDULA.test(ced.toUpperCase())) e.push([0, 'Cédula', 'Formato inválido.', 'Usa provincia-tomo-asiento, ej. 8-123-456.']);
+  if (!nom) e.push([1, 'Nombre', 'Es obligatorio.', 'Escribe el nombre completo.']);
+  if (!/^\d+(\.\d{1,2})?$/.test(sal)) e.push([2, 'Salario', 'Debe ser un número.', 'Solo el número, ej. 1250.00.']);
+  else if (Number(sal) <= 0) e.push([2, 'Salario', 'Debe ser mayor que 0.', 'Revisa el monto del período.']);
+  if (!/^\d+$/.test(dia) || Number(dia) > 31) e.push([3, 'Días laborados', 'Máximo 31 días.', 'Indica un entero entre 0 y 31.']);
+  if (!CATALOGO.has(ocu)) e.push([4, 'Código de ocupación', 'No existe en el catálogo.', 'Busca el código correcto.']);
+  return e;
+}
+
+let caso = 'correcta';
+function pintarTabla(marcas) {
+  const filas = CASOS[caso];
+  $('tabla').tBodies[0].innerHTML = filas.map((f, i) =>
+    `<tr><td>${i + 2}</td>${f.map((v, c) => {
+      const m = marcas && marcas.get(`${i}-${c}`);
+      return `<td class="${m ? 'mal' : marcas ? 'bien' : ''}">${v}</td>`;
+    }).join('')}</tr>`).join('');
+}
+function seleccionar(c) {
+  caso = c;
+  document.querySelectorAll('.selector .btn').forEach((b) => b.classList.toggle('activo', b.dataset.caso === c));
+  $('resultado').innerHTML = '';
+  pintarTabla();
+}
+document.querySelectorAll('.selector .btn').forEach((b) => b.addEventListener('click', () => seleccionar(b.dataset.caso)));
+
+$('validar').addEventListener('click', () => {
+  const marcas = new Map(), lista = [];
+  CASOS[caso].forEach((f, i) => validarFila(f).forEach(([c, campo, problema, solucion]) => {
+    marcas.set(`${i}-${c}`, true);
+    lista.push({ fila: i + 2, campo, valor: f[c], problema, solucion });
+  }));
+  pintarTabla(marcas);
+  $('resultado').innerHTML = lista.length === 0
+    ? `<div class="caja exito"><h3>✔ Planilla válida</h3>Sin errores. Ya puedes pasar a confirmar el envío.</div>`
+    : `<div class="caja fallo"><h3>✖ ${lista.length} errores encontrados</h3>${lista.map((e) =>
+        `<div class="error-item"><b>Fila ${e.fila} · ${e.campo}</b> <code>${e.valor}</code>
+         <small>${e.problema} ${e.solucion}</small></div>`).join('')}</div>`;
+});
+pintarTabla();
+
+/* ---------- 4 · Checklist ---------- */
+const PASOS = [
+  'Leer CLAUDE.md y docs/trazabilidad.md',
+  'Levantar la API: docker compose up --build',
+  'Levantar el portal: cd web && npm run dev',
+  'Recorrer las 6 pantallas con los botones de datos de prueba',
+  'Correr npm test en api y en web',
+  'Abrir api/openapi.yaml y api/src/validacion/reglas.js',
+  'Elegir una HU del backlog (HU-13 o HU-15)',
+];
+let hechos = [];
+try { hechos = JSON.parse(localStorage.getItem('tutorial-pasos') || '[]'); } catch (e) { /* sin almacenamiento */ }
+$('checklist').innerHTML = PASOS.map((p, i) =>
+  `<li><label><input type="checkbox" data-i="${i}" ${hechos.includes(i) ? 'checked' : ''}><span>${p}</span></label></li>`).join('');
+$('checklist').addEventListener('change', () => {
+  hechos = [...document.querySelectorAll('#checklist input:checked')].map((x) => Number(x.dataset.i));
+  try { localStorage.setItem('tutorial-pasos', JSON.stringify(hechos)); } catch (e) { /* ignorar */ }
+});
+</script>
+</body>
+</html>

@@ -21,6 +21,14 @@ export const config = {
   tamanoMaximoMb: Number(env.MAX_FILE_MB ?? 5),
   // HU-14: reglas desactivadas (ids separados por comas). Ejemplo: REGLAS_DESACTIVADAS=codigo_ocupacion
   reglasDesactivadas: (env.REGLAS_DESACTIVADAS ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+  // HU-17: monitoreo y alertas.
+  //  - METRICS_TOKEN: protege GET /metricas. Vacío: el endpoint queda deshabilitado (404).
+  //  - ALERTA_*: umbrales sobre los últimos 5 minutos. ALERTA_WEBHOOK_URL es opcional (Slack/Discord).
+  metricasToken: env.METRICS_TOKEN ?? '',
+  alertaWebhookUrl: env.ALERTA_WEBHOOK_URL ?? '',
+  alertaTasaError: Number(env.ALERTA_TASA_ERROR ?? 0.05),
+  alertaLatenciaMs: Number(env.ALERTA_LATENCIA_MS ?? 2000),
+  alertaMinSolicitudes: Number(env.ALERTA_MIN_SOLICITUDES ?? 20),
   nivelLog: env.LOG_LEVEL ?? 'info',
 };
 

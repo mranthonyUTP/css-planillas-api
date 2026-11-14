@@ -23,7 +23,7 @@ tags:
   - name: Auditoría
     description: Historial de cargas (HU-11)
   - name: Operación
-    description: Salud del servicio para pruebas de humo (HU-10)
+    description: Salud, pruebas de humo y métricas (HU-10, HU-17)
 
 paths:
   /salud:
@@ -42,6 +42,25 @@ paths:
                 properties:
                   estado: { type: string, const: ok }
                   almacenamiento: { type: string, enum: [memoria, postgres] }
+
+  /metricas:
+    get:
+      tags: [Operación]
+      operationId: metricas
+      summary: Métricas del servicio (formato Prometheus)
+      description: |
+        HU-17. Contadores de solicitudes por ruta y estado, histograma de latencia y uptime.
+        Se protege con `Authorization: Bearer <METRICS_TOKEN>`. Si `METRICS_TOKEN` no está definido,
+        el endpoint está deshabilitado y responde 404.
+      security: []
+      responses:
+        '200':
+          description: Métricas en texto plano
+          content:
+            text/plain:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/NoAutorizado' }
+        '404': { description: Métricas deshabilitadas, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
 
   /auth/login:
     post:

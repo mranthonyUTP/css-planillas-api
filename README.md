@@ -11,7 +11,7 @@ de Seguro Social, con reporte de errores por fila, envío oficial sin duplicados
 |---|---|
 | `web/` | Portal de Planillas (React + Vite): 6 pantallas del flujo del empleador |
 | `api/` | API en Node.js + Express + PostgreSQL. Contrato en `api/openapi.yaml` |
-| `docs/` | Errores frecuentes (HU-01) y modelo de amenazas OWASP API Top 10 (HU-03) |
+| `docs/` | Errores frecuentes (HU-01), modelo de amenazas OWASP API Top 10 (HU-03) y trazabilidad de las HU |
 | `.github/workflows/` | CI con SonarQube (HU-02) y despliegue a staging (HU-10) |
 | `CLAUDE.md` | Contexto completo: historias de usuario, tecnologías, decisiones y diseño |
 
@@ -67,8 +67,12 @@ cd api && BASE_URL=http://localhost:3000 npm run smoke   # pruebas de humo
 | HU-10 Despliegue a staging | Hecha (configurar Render) | `.github/workflows/deploy-staging.yml`, `render.yaml` |
 | HU-11 Auditoría | Hecha | Tabla `cargas`, `GET /cargas` |
 | HU-12 Envío oficial | Hecha | `POST /planillas/enviar` |
+| HU-14 Feature flags de reglas | Hecha (`REGLAS_DESACTIVADAS`) | `api/src/validacion/flags.js`, `GET /reglas` |
+| HU-17 Monitoreo y alertas | Hecha (definir `METRICS_TOKEN`) | `api/src/metricas.js`, `api/src/alertas.js`, `GET /metricas`, `.github/workflows/monitoreo.yml` |
 
-Backlog (Sprint 3): HU-13 rate limiting, HU-14 feature flags, HU-15 OWASP ZAP en el pipeline, HU-17 monitoreo.
+Backlog (Sprint 3): HU-13 rate limiting y HU-15 OWASP ZAP en el pipeline.
+
+La relación entre historias, sprints, código y pruebas está en [`docs/trazabilidad.md`](docs/trazabilidad.md).
 
 ## Tecnologías
 
