@@ -19,7 +19,7 @@ tags:
   - name: Autenticación
     description: Inicio de sesión (HU-07)
   - name: Planillas
-    description: Pre-validación y envío oficial (HU-05, HU-06, HU-08, HU-12)
+    description: Pre-validación, envío oficial y reglas (HU-05, HU-06, HU-08, HU-12, HU-14)
   - name: Auditoría
     description: Historial de cargas (HU-11)
   - name: Operación
@@ -168,6 +168,22 @@ paths:
                 items: { $ref: '#/components/schemas/Carga' }
         '401': { $ref: '#/components/responses/NoAutorizado' }
 
+  /reglas:
+    get:
+      tags: [Planillas]
+      operationId: listarReglas
+      summary: Estado de las reglas de validación
+      description: HU-14. Indica qué reglas están activas. Se desactivan con la variable `REGLAS_DESACTIVADAS`.
+      responses:
+        '200':
+          description: Reglas y su estado
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Regla' }
+        '401': { $ref: '#/components/responses/NoAutorizado' }
+
 components:
   securitySchemes:
     bearer:
@@ -239,6 +255,14 @@ components:
         enviadoPor: { type: string }
         validacion: { $ref: '#/components/schemas/Validacion' }
         repetido: { type: boolean }
+
+    Regla:
+      type: object
+      required: [id, campo, activa]
+      properties:
+        id: { type: string, example: codigo_ocupacion }
+        campo: { type: string, example: Código de ocupación }
+        activa: { type: boolean }
 
     Carga:
       type: object
