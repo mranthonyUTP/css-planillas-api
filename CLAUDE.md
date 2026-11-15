@@ -15,7 +15,7 @@ Se ocultan con `VITE_BOTONES_DEMO=false`.
 ```
 /web    Frontend: React + Vite + React Router (JavaScript, sin TypeScript)
 /api    Backend: Node.js + Express 5. Contrato en api/openapi.yaml (HU-04)
-/docs   errores-frecuentes.md (HU-01), modelo-amenazas.md (HU-03) y trazabilidad.md (HU -> sprint -> código -> pruebas)
+/docs   README.md (índice), problema.md (enunciado y alcance), producto/ (MVP, HU, pantallas y flujo), tutorial/, errores-frecuentes.md (HU-01), modelo-amenazas.md (HU-03) y trazabilidad.md (HU -> sprint -> código -> pruebas)
 /.github/workflows  ci.yml (HU-02, SonarQube) y deploy-staging.yml (HU-10, Render + pruebas de humo)
 docker-compose.yml  PostgreSQL + API para desarrollo local
 render.yaml         Infraestructura de staging (Render Blueprint)

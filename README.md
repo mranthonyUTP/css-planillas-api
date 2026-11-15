@@ -11,7 +11,7 @@ de Seguro Social, con reporte de errores por fila, envío oficial sin duplicados
 |---|---|
 | `web/` | Portal de Planillas (React + Vite): 6 pantallas del flujo del empleador |
 | `api/` | API en Node.js + Express + PostgreSQL. Contrato en `api/openapi.yaml` |
-| `docs/` | Errores frecuentes (HU-01), modelo de amenazas OWASP API Top 10 (HU-03) y trazabilidad de las HU |
+| `docs/` | Documentación del equipo: [índice](docs/README.md), [el problema y el alcance del MVP](docs/problema.md), material de producto, errores frecuentes (HU-01), modelo de amenazas (HU-03) y trazabilidad |
 | `.github/workflows/` | CI con SonarQube (HU-02) y despliegue a staging (HU-10) |
 | `CLAUDE.md` | Contexto completo: historias de usuario, tecnologías, decisiones y diseño |
 
