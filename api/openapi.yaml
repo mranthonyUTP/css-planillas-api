@@ -1,0 +1,973 @@
+openapi: 3.1.0
+info:
+  title: Portal de revisión de planillas
+  version: 0.2.0
+  description: Preparación, revisión y autorización interna; sin presentación ni pago
+    ante CSS.
+servers:
+- url: http://localhost:3000
+paths:
+  /salud:
+    get:
+      operationId: salud
+      description: Estado del servicio.
+      security: []
+      responses:
+        '200':
+          description: Operación completada.
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Solicitud inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Falta autenticación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permiso insuficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado en el ámbito permitido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estado o versión incompatible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /metricas:
+    get:
+      operationId: metricas
+      description: Requiere el token de métricas configurado, independiente del JWT.
+      responses:
+        '200':
+          description: Métricas Prometheus.
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          description: Operación completada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Operación completada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth/login:
+    post:
+      operationId: ingresar
+      description: Cuentas locales de demostración. Deshabilitado en producción.
+      security: []
+      responses:
+        '200':
+          description: Operación completada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sesion'
+        '400':
+          description: Solicitud inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Falta autenticación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permiso insuficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado en el ámbito permitido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estado o versión incompatible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - ruc
+              - usuario
+              - clave
+              properties:
+                ruc:
+                  type: string
+                usuario:
+                  type: string
+                clave:
+                  type: string
+  /reglas:
+    get:
+      operationId: reglas
+      description: Reglas activas del formato demo de cinco columnas.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Operación completada.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '400':
+          description: Solicitud inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Falta autenticación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permiso insuficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado en el ámbito permitido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estado o versión incompatible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /planillas:
+    get:
+      operationId: listarPlanillas
+      description: >-
+        Sin filtro devuelve las series de las empresas asignadas; el elaborador
+        solo consulta la propia. Con actividad=propia, OPERADOR y AUTORIZADOR
+        consultan únicamente series con decisiones de su usuario y rol
+        autenticados, limitadas a sus empresas asignadas. Devuelve una fila por
+        serie con ultimaDecisionPropia, ordenada por fecha de esa decisión
+        descendente y por id en caso de empate. Conserva actividad de intentos
+        anteriores aunque una corrección haya cambiado el estado actual de la
+        serie. El actor y rol no se aceptan como filtros del cliente.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: actividad
+        in: query
+        required: false
+        description: >-
+          propia limita el listado a decisiones del operador o autorizador
+          autenticado. Omitir para conservar el listado general autorizado.
+          Otros valores, valores vacíos o el parámetro repetido son inválidos.
+        schema:
+          type: string
+          enum:
+          - propia
+      responses:
+        '200':
+          description: >-
+            Resúmenes de series del ámbito permitido. ultimaDecisionPropia solo se incluye
+            con actividad=propia; un usuario sin decisiones recibe un array vacío.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResumenSerie'
+        '400':
+          description: El filtro actividad tiene un valor inválido o está repetido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Falta autenticación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El rol activo no es OPERADOR ni AUTORIZADOR para actividad=propia.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado en el ámbito permitido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estado o versión incompatible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /planillas/validar:
+    post:
+      operationId: validar
+      description: Solo ELABORADOR. Un serieId explícito crea una corrección de esa
+        serie. Nueva carga invalida aprobaciones anteriores sin borrar intentos.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Operación completada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Intento'
+        '400':
+          description: Solicitud inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Falta autenticación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permiso insuficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado en el ámbito permitido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estado o versión incompatible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - archivo
+              - periodo
+              - tipo
+              properties:
+                archivo:
+                  type: string
+                  format: binary
+                periodo:
+                  type: string
+                  pattern: ^\d{4}-(0[1-9]|1[0-2])$
+                tipo:
+                  type: string
+                  enum:
+                  - Regular
+                  - Complementaria
+                  - Corrección
+                serieId:
+                  type: string
+                  format: uuid
+  /planillas/{id}:
+    parameters:
+    - &id001
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      operationId: detallePlanilla
+      description: Detalle e intentos de una serie del ámbito autorizado.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Operación completada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetalleSerie'
+        '400':
+          description: Solicitud inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Falta autenticación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permiso insuficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado en el ámbito permitido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estado o versión incompatible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /planillas/{id}/comparar:
+    parameters:
+    - *id001
+    get:
+      operationId: compararIntentos
+      description: Compara dos intentos de la misma serie por identidad, incluidos
+        históricos. Devuelve conflictos si no se puede emparejar con certeza.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Operación completada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comparacion'
+        '400':
+          description: Solicitud inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Falta autenticación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permiso insuficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado en el ámbito permitido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estado o versión incompatible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: anterior
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: actual
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /cargas:
+    get:
+      operationId: listarCargas
+      description: Registro de cargas y decisiones del ámbito autorizado.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Operación completada.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '400':
+          description: Solicitud inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Falta autenticación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permiso insuficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado en el ámbito permitido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estado o versión incompatible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /planillas/enviar:
+    post:
+      operationId: envioRetirado
+      deprecated: true
+      security:
+      - bearerAuth: []
+      responses:
+        '410':
+          description: Retirado. El flujo termina en autorización interna.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /planillas/{id}/solicitar-revision:
+    parameters:
+    - *id001
+    post:
+      operationId: solicitarRevision
+      description: Solo ELABORADOR. Exige el intento actual; devolver requiere motivo
+        no vacío. La autorización es interna.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Operación completada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetalleSerie'
+        '400':
+          description: Solicitud inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Falta autenticación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permiso insuficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado en el ámbito permitido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estado o versión incompatible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - &id002
+        name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - intentoId
+              properties:
+                intentoId:
+                  type: string
+                  format: uuid
+                motivo:
+                  type: string
+                  maxLength: 1000
+  /planillas/{id}/revisar:
+    parameters:
+    - *id001
+    post:
+      operationId: revisar
+      description: Solo OPERADOR. Exige el intento actual; devolver requiere motivo
+        no vacío. La autorización es interna.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Operación completada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetalleSerie'
+        '400':
+          description: Solicitud inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Falta autenticación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permiso insuficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado en el ámbito permitido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estado o versión incompatible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - intentoId
+              - decision
+              properties:
+                intentoId:
+                  type: string
+                  format: uuid
+                motivo:
+                  type: string
+                  maxLength: 1000
+                decision:
+                  type: string
+                  enum:
+                  - aprobar
+                  - devolver
+  /planillas/{id}/autorizar:
+    parameters:
+    - *id001
+    post:
+      operationId: autorizar
+      description: Solo AUTORIZADOR. Exige el intento actual; devolver requiere motivo
+        no vacío. La autorización es interna.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Operación completada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetalleSerie'
+        '400':
+          description: Solicitud inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Falta autenticación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permiso insuficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No encontrado en el ámbito permitido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estado o versión incompatible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - intentoId
+              - decision
+              properties:
+                intentoId:
+                  type: string
+                  format: uuid
+                motivo:
+                  type: string
+                  maxLength: 1000
+                decision:
+                  type: string
+                  enum:
+                  - autorizar
+                  - devolver
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        mensaje:
+          type: string
+        codigo:
+          type: string
+    Empresa:
+      type: object
+      properties:
+        ruc:
+          type: string
+        nombre:
+          type: string
+    Sesion:
+      type: object
+      properties:
+        token:
+          type: string
+        usuario:
+          type: string
+        rol:
+          type: string
+          enum:
+          - ELABORADOR
+          - OPERADOR
+          - AUTORIZADOR
+        empresa:
+          $ref: '#/components/schemas/Empresa'
+        empresas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Empresa'
+    Observacion:
+      type: object
+      properties:
+        fila:
+          type: integer
+        campo:
+          type: string
+        campoId:
+          type: string
+        valor:
+          type: string
+        problema:
+          type: string
+        solucion:
+          type: string
+    Trabajador:
+      type: object
+      properties:
+        clave:
+          type: string
+        tipoDocumento:
+          type: string
+        documento:
+          type: string
+        seguroSocial:
+          type: string
+        nombre:
+          type: string
+        apellido:
+          type: string
+        nombreCompleto:
+          type: string
+        sueldo:
+          type: string
+        fila:
+          type: integer
+        valido:
+          type: boolean
+        rubros:
+          type: object
+          additionalProperties:
+            type: string
+        adicionales:
+          type: object
+          additionalProperties:
+            type: string
+        errores:
+          type: array
+          items:
+            $ref: '#/components/schemas/Observacion'
+    Intento:
+      type: object
+      properties:
+        id:
+          type: string
+        serieId:
+          type: string
+        archivo:
+          type: string
+        usuario:
+          type: string
+        empresaRuc:
+          type: string
+        empresaNombre:
+          type: string
+        formato:
+          type: string
+        periodo:
+          type: string
+        tipo:
+          type: string
+        validadaEn:
+          type: string
+        numero:
+          type: integer
+        filas:
+          type: integer
+        filasConError:
+          type: integer
+        salariosValidos:
+          type: integer
+        valida:
+          type: boolean
+        estructuraValida:
+          type: boolean
+        totalSalariosParcial:
+          type: boolean
+        totalSalarios:
+          type: number
+        errores:
+          type: array
+          items:
+            $ref: '#/components/schemas/Observacion'
+        trabajadores:
+          type: array
+          items:
+            $ref: '#/components/schemas/Trabajador'
+    ResumenSerie:
+      type: object
+      properties:
+        id:
+          type: string
+        empresaRuc:
+          type: string
+        empresaNombre:
+          type: string
+        periodo:
+          type: string
+        tipo:
+          type: string
+        ultimoIntentoId:
+          type: string
+        creadaEn:
+          type: string
+        actualizadaEn:
+          type: string
+        estado:
+          type: string
+          enum:
+          - BORRADOR
+          - PENDIENTE_REVISION
+          - PENDIENTE_AUTORIZACION
+          - AUTORIZADA
+          - DEVUELTA
+        numeroIntentos:
+          type: integer
+        ultimoIntentoResumen:
+          $ref: '#/components/schemas/Intento'
+        ultimaDecisionPropia:
+          description: >-
+            Presente solo en GET /planillas?actividad=propia. El estado y
+            ultimoIntentoResumen de la fila describen la serie actual; esta
+            decisión puede corresponder a un intento anterior.
+          $ref: '#/components/schemas/UltimaDecisionPropia'
+    UltimaDecisionPropia:
+      type: object
+      additionalProperties: false
+      description: Última decisión del usuario y rol autenticados, sin claves internas de idempotencia.
+      required:
+      - id
+      - accion
+      - decision
+      - motivo
+      - usuario
+      - rol
+      - intentoId
+      - fecha
+      - numeroIntento
+      - archivo
+      - esIntentoActual
+      properties:
+        id:
+          type: string
+          format: uuid
+        accion:
+          type: string
+          enum:
+          - aprobar
+          - devolver-revision
+          - autorizar
+          - devolver-autorizacion
+        decision:
+          type: string
+          enum:
+          - aprobar
+          - devolver
+          - autorizar
+        motivo:
+          type: string
+        usuario:
+          type: string
+        rol:
+          type: string
+          enum:
+          - OPERADOR
+          - AUTORIZADOR
+        intentoId:
+          type: string
+          format: uuid
+        fecha:
+          type: string
+          format: date-time
+        numeroIntento:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        archivo:
+          type:
+          - string
+          - 'null'
+        esIntentoActual:
+          type: boolean
+          description: false indica una decisión histórica de un intento que ya fue corregido.
+    DetalleSerie:
+      allOf:
+      - $ref: '#/components/schemas/ResumenSerie'
+      - type: object
+        properties:
+          intentos:
+            type: array
+            items:
+              $ref: '#/components/schemas/Intento'
+          eventos:
+            type: array
+            items:
+              type: object
+          comprobante:
+            type:
+            - object
+            - 'null'
+            description: Constancia INT- de autorización interna; no es aceptación
+              CSS.
+    Comparacion:
+      type: object
+      properties:
+        comparable:
+          type: boolean
+        anterior:
+          type: object
+        actual:
+          type: object
+        cambios:
+          type: array
+          items:
+            type: object
+        altas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Trabajador'
+        bajas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Trabajador'
+        sinCambios:
+          type: integer
+        totales:
+          type: object
+        conflictos:
+          type: array
+          items:
+            type: object

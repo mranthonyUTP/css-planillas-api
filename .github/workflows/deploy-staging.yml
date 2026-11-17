@@ -1,0 +1,38 @@
+# HU-10: despliegue automático a staging con pruebas de humo.
+# Se ejecuta cuando el CI pasa en main. Requiere en GitHub:
+#   - secreto RENDER_DEPLOY_HOOK_URL (Render › servicio de la API › Settings › Deploy Hook)
+#   - variable STAGING_API_URL (ej. https://css-planillas-api.onrender.com)
+name: Despliegue a staging
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: staging
+
+jobs:
+  desplegar:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Disparar el despliegue en Render
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            echo "::error::Falta el secreto RENDER_DEPLOY_HOOK_URL"; exit 1
+          fi
+          curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+      - name: Esperar a que la nueva versión arranque
+        run: sleep 90
+      - name: Pruebas de humo
+        working-directory: api
+        run: npm run smoke
+        env:
+          BASE_URL: ${{ vars.STAGING_API_URL }}
