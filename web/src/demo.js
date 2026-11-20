@@ -10,9 +10,8 @@ export const CREDENCIALES_DEMO = {
 };
 
 export const ACCESOS_DEMO = [
-  { etiqueta: 'Entrar como elaborador', credenciales: CREDENCIALES_DEMO },
-  { etiqueta: 'Entrar como operador', credenciales: { ...CREDENCIALES_DEMO, usuario: 'operador' } },
-  { etiqueta: 'Entrar como autorizador', credenciales: { ...CREDENCIALES_DEMO, usuario: 'representante' } },
+  { etiqueta: 'Responsable', credenciales: CREDENCIALES_DEMO },
+  { etiqueta: 'Operador', credenciales: { ...CREDENCIALES_DEMO, usuario: 'operador' } },
   { etiqueta: 'Empresa 2', credenciales: { ruc: '155987654-1-2021', usuario: 'empresa.dos', clave: 'demo1234' } },
 ];
 

@@ -24,7 +24,7 @@ export default function Ingresar() {
     try {
       const sesion = await api.ingresar(datos);
       iniciar(sesion);
-      navegar(sesion.rol === 'ELABORADOR' ? '/cargar' : '/bandeja');
+      navegar(sesion.rol === 'OPERADOR' ? '/bandeja' : '/cargar');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -37,12 +37,12 @@ export default function Ingresar() {
       <div className="ingreso">
         <section className="ingreso-intro">
           <p className="ingreso-antetitulo">Cada dato cuenta</p>
-          <h1 className="titulo-grande">Una planilla clara.<br />Cada revisión, en su lugar.</h1>
-          <p className="lead">Consulta los trabajadores y sus rubros, corrige observaciones y conserva la revisión de cada intento.</p>
+          <h1 className="titulo-grande">Una planilla clara.<br />Corrige desde el origen.</h1>
+          <p className="lead">Revisa el formato, contrasta los sueldos con tu referencia y conserva cada intento.</p>
           <ol className="lista-pasos">
-            <li><span>1</span><div><strong>Prepara y corrige</strong><p>El elaborador carga el archivo y revisa los datos de cada trabajador.</p></div></li>
-            <li><span>2</span><div><strong>Revisa con el operador</strong><p>El operador puede aprobar la revisión o devolverla con un motivo.</p></div></li>
-            <li><span>3</span><div><strong>Autoriza internamente</strong><p>El representante revisa la versión indicada y registra su decisión.</p></div></li>
+            <li><span>1</span><div><strong>Prepara y corrige</strong><p>El empleador carga el archivo y revisa los datos de cada trabajador.</p></div></li>
+            <li><span>2</span><div><strong>Contrasta con tu referencia</strong><p>Identifica diferencias de presencia y sueldo que debes revisar en tu nómina.</p></div></li>
+            <li><span>3</span><div><strong>Corrige y vuelve a comprobar</strong><p>Envía otro intento de la misma planilla sin perder los anteriores.</p></div></li>
           </ol>
         </section>
 
@@ -73,7 +73,7 @@ export default function Ingresar() {
           </form>
           <div className="nota-segura">
             <Candado />
-            <span>Las acciones disponibles dependen del rol y de las empresas asignadas a tu cuenta.</span>
+            <span>Tus planillas están vinculadas a la empresa de tu cuenta.</span>
           </div>
           {modoSimulado && (
             <p className="texto-pequeno">Demostración con datos del navegador. Usa las cuentas de prueba; no comunica con la CSS ni representa un acceso productivo.</p>

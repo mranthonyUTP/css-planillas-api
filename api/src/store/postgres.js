@@ -1,8 +1,9 @@
 // Misma interfaz y reglas que memoria.js. Intentos y eventos se agregan sin reescribirlos.
 import { readFile } from 'node:fs/promises';
 import pg from 'pg';
+import { aplicarRevisionOperador } from '../../../shared/revision-operador.js';
 import { conflicto, noEncontrado } from '../errores.js';
-import { crearSerie, agregarIntento, transicionar, resumirSerie, resumirActividadPropia, cargaDeEvento } from './dominio.js';
+import { crearSerie, agregarIntento, resumirSerie, cargaDeEvento } from './dominio.js';
 
 const DETALLE = `s.snapshot || jsonb_build_object(
   'intentos', COALESCE((SELECT jsonb_agg(i.snapshot ORDER BY i.numero)
@@ -101,24 +102,14 @@ export async function crearStorePostgres(url) {
         return { ...structuredClone(serie.intentos.at(-1)), estado: serie.estado };
       });
     },
-    async listarPlanillas(rucs, { actividadPropia } = {}) {
-      const series = await seriesPermitidas(rucs);
-      if (!actividadPropia) return series.map(resumirSerie);
-      return series.map((serie) => resumirActividadPropia(serie, actividadPropia)).filter(Boolean)
-        .sort((a, b) => b.ultimaDecisionPropia.fecha.localeCompare(a.ultimaDecisionPropia.fecha) || a.id.localeCompare(b.id));
-    },
+    async listarPlanillas(rucs) { return (await seriesPermitidas(rucs)).map(resumirSerie); },
     obtenerPlanilla,
-    async decidirPlanilla(entrada) {
-      return transaccion(async (cliente) => {
-        const original = await bloquearSerie(cliente, entrada.id, entrada.rucs);
-        const serie = transicionar(original, entrada);
-        if (serie.eventos.length !== original.eventos.length) await persistir(cliente, serie, original);
-        return serie;
-      });
+    async revisarOperador(entrada) {
+      return transaccion(async cliente => { const original = await bloquearSerie(cliente, entrada.idSerie, entrada.rucs); const serie = aplicarRevisionOperador(original, entrada); if (serie.eventos.length !== original.eventos.length) await persistir(cliente, serie, original); return serie; });
     },
     async listarCargas(rucs) {
       return (await seriesPermitidas(rucs))
-        .flatMap((serie) => serie.eventos.map((evento) => cargaDeEvento(serie, evento)))
+        .flatMap((serie) => serie.eventos.filter(e => e.accion === 'carga').map((evento) => cargaDeEvento(serie, evento)))
         .sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 500)
         .map(({ empresaRuc, ...carga }) => carga);
     },

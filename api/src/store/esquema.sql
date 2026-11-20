@@ -46,15 +46,18 @@ CREATE TABLE IF NOT EXISTS cargas (
 
 CREATE INDEX IF NOT EXISTS cargas_empresa_fecha ON cargas (empresa_ruc, fecha DESC);
 
--- El flujo interno conserva sus versiones sin alterar las tablas anteriores.
+-- Las planillas conservan sus intentos y registros de carga.
 CREATE TABLE IF NOT EXISTS planilla_series (
   id uuid PRIMARY KEY,
   empresa_ruc text NOT NULL,
-  estado text NOT NULL CHECK (estado IN ('BORRADOR','PENDIENTE_REVISION','PENDIENTE_AUTORIZACION','AUTORIZADA','DEVUELTA')),
+  estado text NOT NULL,
   creada_en timestamptz NOT NULL,
   actualizada_en timestamptz NOT NULL,
   snapshot jsonb NOT NULL
 );
+
+-- Permite resultados automáticos también en instalaciones anteriores.
+ALTER TABLE planilla_series DROP CONSTRAINT IF EXISTS planilla_series_estado_check;
 
 CREATE TABLE IF NOT EXISTS planilla_intentos (
   id uuid PRIMARY KEY,

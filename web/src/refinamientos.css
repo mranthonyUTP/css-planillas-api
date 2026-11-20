@@ -97,3 +97,53 @@ details[open] > summary.enlace-accion::before, .rubros-ceros[open] > summary::be
   .revision-despejada .trabajador-nombre { font-size: 14px; }
   .revision-despejada .rubros-grid { grid-template-columns: minmax(0,1fr); }
 }
+/* El contraste reutiliza las superficies y tablas de revisión. */
+.referencia-carga { background: #f4f6f9; padding: 22px; border-radius: 12px; }
+.contraste-panel .cabecera-pagina { margin-bottom: 0; }
+.contraste-panel details { padding: 16px 0; }
+.contraste-panel summary { cursor: pointer; color: #0b4f9c; font-weight: 600; }
+.contraste-panel details p { margin-top: 14px; }
+.contraste-panel li { margin: 10px 0; }
+.contraste-limites { background: #f4f6f9; padding: 18px !important; border-radius: 10px; }
+.resumen-final { gap: 24px; }
+.resumen-hero { background: var(--azul-marino); color: #fff; padding: 28px 32px; border-radius: 14px; }
+.resumen-hero-superior { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.resumen-antetitulo { color: #c9d9ee; letter-spacing: .09em; font-size: 12px; font-weight: 600; }
+.resumen-version { background: #ffffff18; color: #e8f0fc; border-radius: 20px; padding: 5px 12px; font-size: 12px; }
+.resumen-hero-titulo { display: flex; align-items: center; gap: 14px; margin: 22px 0 12px; }
+.resumen-hero-titulo h2 { font-size: 28px; line-height: 1.25; color: #fff; margin: 0; }
+.resumen-estado-icono { color: #f2b632; display: flex; flex-shrink: 0; }
+.resumen-hero-descripcion { max-width: 700px; color: #e0e9f6; }
+.resumen-metricas { display: flex; flex-wrap: wrap; gap: 24px 64px; margin-top: 28px; }
+.resumen-metricas > div { display: grid; gap: 5px; }
+.resumen-metricas span { color: #c9d9ee; font-size: 13px; }
+.resumen-metricas strong { font-size: 25px; font-weight: 500; overflow-wrap: anywhere; }
+.resumen-archivo { display: flex; align-items: flex-start; gap: 14px; padding: 4px 8px; min-width: 0; }
+.resumen-documento { display: flex; padding: 12px; background: var(--azul-claro); border-radius: 10px; color: var(--azul-accion); }
+.resumen-archivo > div { min-width: 0; }
+.resumen-archivo h2 { color: var(--azul-marino); font-size: 17px; overflow-wrap: anywhere; margin: 0 0 4px; }
+.resumen-archivo p { color: var(--texto-secundario); margin-top: 4px; }
+.resumen-comprobaciones { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.resumen-comprobacion { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 24px; }
+.resumen-comprobacion-titulo { display: flex; align-items: center; gap: 10px; color: var(--azul-marino); }
+.resumen-comprobacion-titulo h2 { font-size: 17px; margin: 0; }
+.resumen-sello { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: var(--azul-claro); color: var(--azul-accion); flex-shrink: 0; }
+.resumen-sello-correcto { background: #e8f4ed; color: #21663c; }
+.resumen-conteo { font-size: 38px; line-height: 1.2; color: var(--azul-marino); font-weight: 600; margin-top: 8px; }
+.resumen-comprobacion > p { color: var(--texto-secundario); }
+.resumen-comprobacion .boton { margin-top: auto; }
+.resumen-siguiente { background: #eaf0f8; padding: 24px; border-radius: 12px; }
+.resumen-alcance summary { color: var(--azul-accion); cursor: pointer; font-size: 14px; }
+.resumen-alcance p { margin-top: 12px; color: var(--texto-secundario); font-size: 14px; }
+.perfil-datos { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 24px; margin: 0; }
+.perfil-datos dt { color: var(--texto-secundario); font-size: 13px; margin-bottom: 5px; }
+.perfil-datos dd { margin: 0; color: var(--azul-marino); overflow-wrap: anywhere; }
+.cuenta-perfil { display: inline-block; color: #d5e1f2; padding: 4px 0; }
+.cuenta-perfil:hover { color: #fff; }
+@media (max-width: 650px) {
+  .resumen-comprobaciones { grid-template-columns: minmax(0,1fr); }
+  .resumen-hero { padding: 24px 20px; }
+  .resumen-hero-titulo h2 { font-size: 23px; }
+  .resumen-metricas strong { font-size: 22px; }
+  .resumen-final > .acciones, .resumen-final > .acciones > .acciones { align-items: stretch; flex-direction: column; }
+}

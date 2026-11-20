@@ -237,7 +237,7 @@ code { font-family: var(--mono); font-size: 0.85em; color: var(--texto-secundari
   .tarjeta { border-color: #999; }
 }
 
-/* Revisión de trabajadores y decisiones sobre cada intento. */
+/* Revisión de trabajadores y resultados por intento. */
 .marco, .principal, .pila, .tarjeta, .tabla-contenedor { min-width: 0; }
 .principal { overflow-wrap: anywhere; }
 .boton-primario { background: var(--dorado); color: var(--azul-profundo); border-color: var(--dorado); }
@@ -311,21 +311,7 @@ code { font-family: var(--mono); font-size: 0.85em; color: var(--texto-secundari
 .errores-generales { padding: 16px 20px 0; }
 .acciones-texto { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
 .revision-acciones { margin: 22px 0; }
-.revision-estado { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; margin: 0 0 18px; min-width: 0; }
-.revision-decision { margin: 24px 0; min-width: 0; scroll-margin-top: 24px; }
-.revision-decision-cabecera { margin-bottom: 18px; min-width: 0; }
-.revision-decision-cabecera h2 { margin: 0 0 6px; color: var(--azul-marino); font-size: 20px; }
-.revision-decision-cabecera p { color: var(--texto-secundario); font-size: 15px; }
-.revision-decision-acciones { margin-top: 0; gap: 16px; min-width: 0; }
-.revision-decision-acciones .acciones-texto { margin-left: auto; }
-.revision-decision-acciones .boton { max-width: 100%; padding: 10px 16px; text-align: center; }
-.devolucion-formulario { margin: 22px 0; }
-.devolucion-formulario .campo { margin-top: 16px; }
 .campo textarea { min-height: 110px; padding: 12px; resize: vertical; max-width: 100%; border: 1px solid var(--borde-campo); border-radius: 4px; font: inherit; color: var(--texto); background: var(--superficie); }
-.nota-devolucion { margin: 24px 0; padding: 14px 16px; border-left: 3px solid var(--error); background: var(--error-fondo); color: var(--error-texto); }
-.nota-devolucion p { margin-top: 5px; font-size: 14px; }
-.constancia-interna { margin: 24px 0; border-left: 4px solid var(--exito); }
-.constancia-interna p + p { margin-top: 7px; }
 .nota-validacion { margin-top: 24px; font-size: 13px; color: var(--texto-secundario); }
 .resumen-bandeja { margin: 0 0 20px; color: var(--texto-secundario); }
 .historial-intentos { border-radius: var(--radio); background: var(--azul-claro); padding: 4px 16px; }
@@ -383,19 +369,13 @@ details[open] > summary.enlace-accion { margin-bottom: 10px; }
   .acciones-texto { width: 100%; justify-content: stretch; }
   .acciones-texto .etiqueta { margin-bottom: 0; }
   .revision-acciones { align-items: stretch; gap: 14px; }
-  .revision-decision { padding: 18px 16px; }
-  .revision-decision-acciones.acciones.entre { flex-direction: column; align-items: stretch; }
-  .revision-decision-acciones .acciones-texto { margin-left: 0; }
-  .revision-decision-acciones .boton { width: 100%; }
   .comparacion-selectores { flex-direction: column; padding: 16px; gap: 18px; }
   .comparacion-selectores .campo { flex: none; }
   .filtros { padding: 16px; }
   .filtros .campo { min-width: 0; flex-basis: 100%; }
   .historial-intentos { padding-left: 12px; padding-right: 12px; }
-  .devolucion-formulario .acciones { flex-direction: column-reverse; align-items: stretch; }
 }
 @media print {
-  .revision-acciones, .revision-decision-acciones, .revision-estado .enlace-accion, .devolucion-formulario, .trabajadores-barra, .migas { display: none !important; }
   .banda-archivo, .serie-resumen, .revision-panel { break-inside: avoid; }
 }
 
@@ -403,9 +383,6 @@ details[open] > summary.enlace-accion { margin-bottom: 10px; }
 .empresa-selector label { color: var(--texto-claro); font-size: 13px; white-space: nowrap; }
 .empresa-selector select { max-width: 310px; min-width: 0; min-height: 40px; padding: 6px 10px; border: 1px solid var(--azul-linea); border-radius: 4px; background: var(--azul-profundo); color: #fff; font: inherit; font-size: 14px; }
 .acciones-cabecera { display: flex; flex-wrap: wrap; gap: 10px; }
-.decision-registrada { margin: 18px 0; padding: 14px 16px; border-left: 3px solid var(--azul-accion); background: var(--azul-claro); font-size: 14px; }
-.decision-registrada > strong { display: block; color: var(--azul-marino); }
-.decision-registrada p { margin-top: 5px; }
 @media (max-width: 900px) {
   .empresa-selector { flex: 1 0 100%; margin: 0; padding-left: 14px; }
   .empresa-selector select { flex: 1; max-width: 450px; }

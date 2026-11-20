@@ -40,38 +40,29 @@ async function pedir(ruta, { metodo = 'GET', token, cuerpo, cabeceras = {} } = {
   }
   return datos;
 }
-const acciones = { solicitar: ['solicitar-revision', undefined], aprobar: ['revisar', 'aprobar'],
-  'devolver-revision': ['revisar', 'devolver'], autorizar: ['autorizar', 'autorizar'], 'devolver-autorizacion': ['autorizar', 'devolver'] };
 const apiReal = {
   ingresar: (credenciales) => pedir('/auth/login', { metodo: 'POST', cuerpo: credenciales }),
-  validar({ archivo, periodo, tipo, serieId }, { token }) {
+  validar({ archivo, referencia, periodo, tipo, serieId }, { token }) {
     const form = new FormData();
     form.append('archivo', archivo); form.append('periodo', periodo); form.append('tipo', tipo);
+    if (referencia) form.append('referencia', referencia);
     if (serieId) form.append('serieId', serieId);
     return pedir('/planillas/validar', { metodo: 'POST', token, cuerpo: form });
   },
-  series: ({ token }, { actividad } = {}) => pedir(`/planillas${actividad ? `?${new URLSearchParams({ actividad })}` : ''}`, { token }),
+  series: ({ token }) => pedir('/planillas', { token }),
   detalleSerie: (id, { token }) => pedir(`/planillas/${encodeURIComponent(id)}`, { token }),
   comparar: (id, antes, despues, { token }) => pedir(`/planillas/${encodeURIComponent(id)}/comparar?${new URLSearchParams({ anterior: antes, actual: despues })}`, { token }),
-  transicionar({ serieId, intentoId, accion, motivo = '', idempotencyKey = crypto.randomUUID() }, { token }) {
-    const datos = Object.hasOwn(acciones, accion) ? acciones[accion] : null;
-    if (!datos) return Promise.reject(new Error('La acción seleccionada no existe.'));
-    return pedir(`/planillas/${encodeURIComponent(serieId)}/${datos[0]}`, { metodo: 'POST', token,
-      cuerpo: { intentoId, decision: datos[1], motivo }, cabeceras: { 'Idempotency-Key': idempotencyKey } });
+  revisionInterna({ serieId, intentoId, decision, motivo = '', idempotencyKey }, { token }) {
+    return pedir(`/planillas/${encodeURIComponent(serieId)}/${decision === 'enviar' ? 'enviar-operador' : 'decision-operador'}`, { metodo: 'POST', token, cuerpo: { intentoId, decision, motivo }, cabeceras: { 'Idempotency-Key': idempotencyKey } });
   },
   cargas: ({ token }) => pedir('/cargas', { token }),
-  enviar: () => Promise.reject(new Error('Usa la revisión y autorización interna. La presentación oficial se realiza fuera del portal.')),
 };
 const cliente = modoSimulado ? mockApi : apiReal;
 export const api = {
   ...cliente,
+  async revisionInterna(...argumentos) { const resultado = await cliente.revisionInterna(...argumentos); publicarCambio(); return resultado; },
   async validar(...argumentos) {
     const resultado = await cliente.validar(...argumentos);
-    publicarCambio();
-    return resultado;
-  },
-  async transicionar(...argumentos) {
-    const resultado = await cliente.transicionar(...argumentos);
     publicarCambio();
     return resultado;
   },

@@ -1,5 +1,6 @@
-import { crearSerie, agregarIntento, transicionar, resumirSerie, resumirActividadPropia, cargaDeEvento } from './dominio.js';
+import { crearSerie, agregarIntento, resumirSerie, cargaDeEvento } from './dominio.js';
 import { noEncontrado } from '../errores.js';
+import { aplicarRevisionOperador } from '../../../shared/revision-operador.js';
 
 export function crearStoreMemoria() {
   const series = new Map();
@@ -12,20 +13,11 @@ export function crearStoreMemoria() {
       const s = agregarIntento(original, intento); series.set(s.id, s);
       return { ...structuredClone(s.intentos.at(-1)), estado: s.estado };
     },
-    async listarPlanillas(rucs, { actividadPropia } = {}) {
-      return [...series.values()].filter((s) => permitida(s, rucs))
-        .map((s) => actividadPropia ? resumirActividadPropia(s, actividadPropia) : resumirSerie(s))
-        .filter(Boolean)
-        .sort((a, b) => actividadPropia
-          ? b.ultimaDecisionPropia.fecha.localeCompare(a.ultimaDecisionPropia.fecha) || a.id.localeCompare(b.id)
-          : b.actualizadaEn.localeCompare(a.actualizadaEn));
-    },
+    async listarPlanillas(rucs) { return [...series.values()].filter(s => permitida(s, rucs)).map(resumirSerie).sort((a,b) => b.actualizadaEn.localeCompare(a.actualizadaEn)); },
+    async revisarOperador(entrada) { const serie = aplicarRevisionOperador(obtener(entrada.idSerie, entrada.rucs), entrada); series.set(serie.id, serie); return structuredClone(serie); },
     async obtenerPlanilla(id, rucs) { const s = series.get(id); return permitida(s, rucs) ? structuredClone(s) : null; },
-    async decidirPlanilla(entrada) {
-      const s = transicionar(obtener(entrada.id, entrada.rucs), entrada); series.set(s.id, s); return structuredClone(s);
-    },
     async listarCargas(rucs) {
-      return [...series.values()].filter((s) => permitida(s, rucs)).flatMap((s) => s.eventos.map((e) => cargaDeEvento(s, e)))
+      return [...series.values()].filter((s) => permitida(s, rucs)).flatMap((s) => s.eventos.filter(e => e.accion === 'carga').map((e) => cargaDeEvento(s, e)))
         .sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 500).map(({ empresaRuc, ...c }) => c);
     },
     async cerrar() {},

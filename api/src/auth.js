@@ -3,7 +3,7 @@ import { SignJWT, jwtVerify, createRemoteJWKSet } from 'jose';
 import { config } from './config.js';
 import { noAutorizado, solicitudInvalida, ErrorApi } from './errores.js';
 
-export const ROLES = ['ELABORADOR', 'OPERADOR', 'AUTORIZADOR'];
+export const ROLES = ['ELABORADOR', 'OPERADOR'];
 const ISSUER_LOCAL = 'css-planillas-api';
 let jwks;
 export const EMPRESAS_DEMO = [
@@ -11,12 +11,10 @@ export const EMPRESAS_DEMO = [
   { ruc: '155987654-1-2021', nombre: 'Segunda empresa de demostración, S.A.' },
 ];
 const CUENTAS_DEMO = [
+  { usuario: 'operador', rol: 'OPERADOR', ruc: EMPRESAS_DEMO[0].ruc },
   { usuario: 'ana.contabilidad', rol: 'ELABORADOR', ruc: EMPRESAS_DEMO[0].ruc },
   { usuario: 'elaborador', rol: 'ELABORADOR', ruc: EMPRESAS_DEMO[0].ruc },
   { usuario: 'empresa.dos', rol: 'ELABORADOR', ruc: EMPRESAS_DEMO[1].ruc },
-  { usuario: 'operador', rol: 'OPERADOR' },
-  { usuario: 'autorizador', rol: 'AUTORIZADOR' },
-  { usuario: 'representante', rol: 'AUTORIZADOR' },
 ];
 
 // Los roles y las empresas proceden de cuentas del servidor o de claims firmados.
@@ -57,8 +55,7 @@ export const requiereRol = (...roles) => (req, _res, next) => {
   if (!req.usuario.roles.some((r) => roles.includes(r))) return next(new ErrorApi(403, 'Tu rol no permite realizar esta acción.', 'sin_permiso'));
   next();
 };
-export const rucsPermitidos = (identidad) => identidad.roles.some((r) => ['OPERADOR', 'AUTORIZADOR'].includes(r))
-  ? identidad.empresas.map((e) => e.ruc) : [identidad.ruc];
+export const rucsPermitidos = (identidad) => [identidad.ruc];
 
 export async function login(req, res) {
   if (config.authModo !== 'local' || config.entorno === 'production') throw new ErrorApi(404, 'El inicio de sesión se hace con el proveedor de identidad.', 'no_disponible');

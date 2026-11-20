@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Portal de revisión de planillas
   version: 0.2.0
-  description: Preparación, revisión y autorización interna; sin presentación ni pago
+  description: Prevalidación y contraste con referencia; sin presentación ni pago
     ante CSS.
 servers:
 - url: http://localhost:3000
@@ -179,75 +179,23 @@ paths:
   /planillas:
     get:
       operationId: listarPlanillas
-      description: >-
-        Sin filtro devuelve las series de las empresas asignadas; el elaborador
-        solo consulta la propia. Con actividad=propia, OPERADOR y AUTORIZADOR
-        consultan únicamente series con decisiones de su usuario y rol
-        autenticados, limitadas a sus empresas asignadas. Devuelve una fila por
-        serie con ultimaDecisionPropia, ordenada por fecha de esa decisión
-        descendente y por id en caso de empate. Conserva actividad de intentos
-        anteriores aunque una corrección haya cambiado el estado actual de la
-        serie. El actor y rol no se aceptan como filtros del cliente.
+      description: Planillas de la empresa autenticada, con resultado automático del último intento.
       security:
       - bearerAuth: []
-      parameters:
-      - name: actividad
-        in: query
-        required: false
-        description: >-
-          propia limita el listado a decisiones del operador o autorizador
-          autenticado. Omitir para conservar el listado general autorizado.
-          Otros valores, valores vacíos o el parámetro repetido son inválidos.
-        schema:
-          type: string
-          enum:
-          - propia
       responses:
         '200':
-          description: >-
-            Resúmenes de series del ámbito permitido. ultimaDecisionPropia solo se incluye
-            con actividad=propia; un usuario sin decisiones recibe un array vacío.
+          description: Historial de planillas.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/ResumenSerie'
-        '400':
-          description: El filtro actividad tiene un valor inválido o está repetido.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Falta autenticación.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: El rol activo no es OPERADOR ni AUTORIZADOR para actividad=propia.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: No encontrado en el ámbito permitido.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Estado o versión incompatible.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
   /planillas/validar:
     post:
       operationId: validar
       description: Solo ELABORADOR. Un serieId explícito crea una corrección de esa
-        serie. Nueva carga invalida aprobaciones anteriores sin borrar intentos.
+        serie, conservando empresa, período y tipo originales y los intentos anteriores.
       security:
       - bearerAuth: []
       responses:
@@ -301,6 +249,10 @@ paths:
                 archivo:
                   type: string
                   format: binary
+                referencia:
+                  type: string
+                  format: binary
+                  description: Nómina opcional del mismo período (.csv o .xlsx, máximo 5 MB). Contrasta presencia y sueldo por identidad; las diferencias no certifican errores ni bloquean por sí mismas la validación de formato.
                 periodo:
                   type: string
                   pattern: ^\d{4}-(0[1-9]|1[0-2])$
@@ -426,7 +378,7 @@ paths:
   /cargas:
     get:
       operationId: listarCargas
-      description: Registro de cargas y decisiones del ámbito autorizado.
+      description: Registro de cargas de la empresa autenticada.
       security:
       - bearerAuth: []
       responses:
@@ -468,227 +420,78 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /planillas/enviar:
+  /planillas/{id}/enviar-operador:
     post:
-      operationId: envioRetirado
-      deprecated: true
+      operationId: enviarAlOperador
+      description: El responsable envía el intento actual sin observaciones de formato a una única revisión interna.
       security:
       - bearerAuth: []
-      responses:
-        '410':
-          description: Retirado. El flujo termina en autorización interna.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /planillas/{id}/solicitar-revision:
-    parameters:
-    - *id001
-    post:
-      operationId: solicitarRevision
-      description: Solo ELABORADOR. Exige el intento actual; devolver requiere motivo
-        no vacío. La autorización es interna.
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Operación completada.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DetalleSerie'
-        '400':
-          description: Solicitud inválida.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Falta autenticación.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Permiso insuficiente.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: No encontrado en el ámbito permitido.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Estado o versión incompatible.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
       parameters:
-      - &id002
-        name: Idempotency-Key
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: Idempotency-Key
         in: header
         required: true
-        schema:
-          type: string
-          minLength: 8
-          maxLength: 128
+        schema: { type: string, pattern: '^[A-Za-z0-9_-]{8,128}$' }
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-              - intentoId
+              required: [intentoId]
               properties:
-                intentoId:
-                  type: string
-                  format: uuid
-                motivo:
-                  type: string
-                  maxLength: 1000
-  /planillas/{id}/revisar:
-    parameters:
-    - *id001
-    post:
-      operationId: revisar
-      description: Solo OPERADOR. Exige el intento actual; devolver requiere motivo
-        no vacío. La autorización es interna.
-      security:
-      - bearerAuth: []
+                intentoId: { type: string, format: uuid }
       responses:
         '200':
-          description: Operación completada.
+          description: Planilla con revisión interna pendiente.
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/DetalleSerie'
-        '400':
-          description: Solicitud inválida.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Falta autenticación.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Permiso insuficiente.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: No encontrado en el ámbito permitido.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Estado o versión incompatible.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      parameters:
-      - *id002
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - intentoId
-              - decision
-              properties:
-                intentoId:
-                  type: string
-                  format: uuid
-                motivo:
-                  type: string
-                  maxLength: 1000
-                decision:
-                  type: string
-                  enum:
-                  - aprobar
-                  - devolver
-  /planillas/{id}/autorizar:
-    parameters:
-    - *id001
+              schema: { $ref: '#/components/schemas/DetalleSerie' }
+        '400': { description: Solicitud o clave inválida. }
+        '401': { description: Falta autenticación. }
+        '403': { description: El perfil no permite enviar. }
+        '404': { description: Planilla no encontrada en la empresa asignada. }
+        '409': { description: Intento inválido, desactualizado o estado incompatible. }
+  /planillas/{id}/decision-operador:
     post:
-      operationId: autorizar
-      description: Solo AUTORIZADOR. Exige el intento actual; devolver requiere motivo
-        no vacío. La autorización es interna.
+      operationId: decidirRevisionOperador
+      description: El operador de la empresa autoriza internamente o devuelve con motivo el intento actual pendiente. No presenta la planilla ante CSS.
       security:
       - bearerAuth: []
-      responses:
-        '200':
-          description: Operación completada.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DetalleSerie'
-        '400':
-          description: Solicitud inválida.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Falta autenticación.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Permiso insuficiente.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: No encontrado en el ámbito permitido.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Estado o versión incompatible.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
       parameters:
-      - *id002
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: { type: string, pattern: '^[A-Za-z0-9_-]{8,128}$' }
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-              - intentoId
-              - decision
+              required: [intentoId, decision]
               properties:
-                intentoId:
-                  type: string
-                  format: uuid
-                motivo:
-                  type: string
-                  maxLength: 1000
-                decision:
-                  type: string
-                  enum:
-                  - autorizar
-                  - devolver
+                intentoId: { type: string, format: uuid }
+                decision: { type: string, enum: [autorizar, devolver] }
+                motivo: { type: string, maxLength: 1000, description: Obligatorio al devolver. }
+      responses:
+        '200':
+          description: Decisión registrada sobre el intento.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DetalleSerie' }
+        '400': { description: Solicitud, clave o motivo inválido. }
+        '401': { description: Falta autenticación. }
+        '403': { description: El perfil no es operador. }
+        '404': { description: Planilla no encontrada en la empresa asignada. }
+        '409': { description: Intento desactualizado, clave reutilizada o estado incompatible. }
 components:
   securitySchemes:
     bearerAuth:
@@ -722,7 +525,6 @@ components:
           enum:
           - ELABORADOR
           - OPERADOR
-          - AUTORIZADOR
         empresa:
           $ref: '#/components/schemas/Empresa'
         empresas:
@@ -782,6 +584,8 @@ components:
     Intento:
       type: object
       properties:
+        contraste:
+          $ref: '#/components/schemas/Contraste'
         id:
           type: string
         serieId:
@@ -826,9 +630,81 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Trabajador'
+    Contraste:
+      type: object
+      description: Resultado conservado por intento. No calcula cuotas ni certifica la referencia o la aceptación de la CSS. Ausente en intentos históricos anteriores a esta función.
+      properties:
+        version:
+          type: integer
+          enum: [1]
+        estado:
+          type: string
+          enum: [no_realizado, no_comparable, realizado]
+        referencia:
+          type: [object, 'null']
+          properties:
+            archivo:
+              type: string
+        comprobado:
+          type: array
+          items:
+            type: string
+        noVerificado:
+          type: array
+          items:
+            type: string
+        diferencias:
+          type: array
+          items:
+            type: object
+            properties:
+              codigo:
+                type: string
+                enum: [SUELDO_DISTINTO, SOLO_REFERENCIA, SOLO_PLANILLA]
+              resultado:
+                type: string
+                enum: [para_revisar]
+              referencia:
+                $ref: '#/components/schemas/PersonaContraste'
+              planilla:
+                $ref: '#/components/schemas/PersonaContraste'
+        sinDiferencias:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonaContraste'
+        conflictos:
+          type: array
+          items:
+            type: object
+            properties:
+              lado:
+                type: string
+                enum: [planilla, referencia]
+              fila:
+                type: integer
+              codigo:
+                type: string
+                enum: [ESTRUCTURA_INVALIDA, SUELDO_ILEGIBLE, IDENTIDAD_AMBIGUA]
+              motivo:
+                type: string
+    PersonaContraste:
+      type: [object, 'null']
+      properties:
+        clave:
+          type: string
+        fila:
+          type: integer
+        documento:
+          type: string
+        nombre:
+          type: string
+        sueldo:
+          type: string
     ResumenSerie:
       type: object
       properties:
+        revisionInterna:
+          $ref: '#/components/schemas/RevisionInterna'
         id:
           type: string
         empresaRuc:
@@ -848,81 +724,24 @@ components:
         estado:
           type: string
           enum:
-          - BORRADOR
-          - PENDIENTE_REVISION
-          - PENDIENTE_AUTORIZACION
-          - AUTORIZADA
-          - DEVUELTA
+          - FORMATO_INVALIDO
+          - CONTRASTE_NO_COMPARABLE
+          - SIN_REFERENCIA
+          - DIFERENCIAS_POR_REVISAR
+          - SIN_DIFERENCIAS
         numeroIntentos:
           type: integer
         ultimoIntentoResumen:
           $ref: '#/components/schemas/Intento'
-        ultimaDecisionPropia:
-          description: >-
-            Presente solo en GET /planillas?actividad=propia. El estado y
-            ultimoIntentoResumen de la fila describen la serie actual; esta
-            decisión puede corresponder a un intento anterior.
-          $ref: '#/components/schemas/UltimaDecisionPropia'
-    UltimaDecisionPropia:
+    RevisionInterna:
       type: object
-      additionalProperties: false
-      description: Última decisión del usuario y rol autenticados, sin claves internas de idempotencia.
-      required:
-      - id
-      - accion
-      - decision
-      - motivo
-      - usuario
-      - rol
-      - intentoId
-      - fecha
-      - numeroIntento
-      - archivo
-      - esIntentoActual
       properties:
-        id:
-          type: string
-          format: uuid
-        accion:
-          type: string
-          enum:
-          - aprobar
-          - devolver-revision
-          - autorizar
-          - devolver-autorizacion
-        decision:
-          type: string
-          enum:
-          - aprobar
-          - devolver
-          - autorizar
-        motivo:
-          type: string
-        usuario:
-          type: string
-        rol:
-          type: string
-          enum:
-          - OPERADOR
-          - AUTORIZADOR
-        intentoId:
-          type: string
-          format: uuid
-        fecha:
-          type: string
-          format: date-time
-        numeroIntento:
-          type:
-          - integer
-          - 'null'
-          minimum: 1
-        archivo:
-          type:
-          - string
-          - 'null'
-        esIntentoActual:
-          type: boolean
-          description: false indica una decisión histórica de un intento que ya fue corregido.
+        estado: { type: string, enum: [SIN_ENVIAR, PENDIENTE, AUTORIZADA, DEVUELTA] }
+        intentoId: { type: string, format: uuid }
+        usuario: { type: string }
+        motivo: { type: string }
+        fecha: { type: string, format: date-time }
+        accion: { type: string, enum: [enviar-operador, autorizar-operador, devolver-operador] }
     DetalleSerie:
       allOf:
       - $ref: '#/components/schemas/ResumenSerie'
@@ -932,16 +751,11 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/Intento'
-          eventos:
+          revisionesInternas:
             type: array
+            description: Movimientos internos conservados por intento, sin claves de idempotencia.
             items:
-              type: object
-          comprobante:
-            type:
-            - object
-            - 'null'
-            description: Constancia INT- de autorización interna; no es aceptación
-              CSS.
+              $ref: '#/components/schemas/RevisionInterna'
     Comparacion:
       type: object
       properties:

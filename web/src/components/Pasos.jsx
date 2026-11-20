@@ -1,11 +1,11 @@
 import { Check } from './Iconos.jsx';
 
-const PASOS = ['Cargar archivo', 'Revisar registros', 'Revisión y autorización'];
+const PASOS = ['Cargar archivos', 'Revisar formato y contraste', 'Resumen de la revisión'];
 
-// actual: 1, 2 o 3. Los pasos anteriores se muestran como completados.
+// Los pasos indican navegación; completarlos no certifica los datos.
 export default function Pasos({ actual }) {
   return (
-    <ol className="pasos" aria-label="Etapas de preparación y revisión interna">
+    <ol className="pasos" aria-label="Etapas de prevalidación">
       {PASOS.map((nombre, i) => {
         const numero = i + 1;
         const estado = numero < actual ? 'hecho' : numero === actual ? 'actual' : 'pendiente';

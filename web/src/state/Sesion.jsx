@@ -5,7 +5,7 @@ const Contexto = createContext(null);
 function leer() {
   try {
     const datos = JSON.parse(sessionStorage.getItem(CLAVE)) ?? {};
-    return datos.sesion && !['ELABORADOR', 'OPERADOR', 'AUTORIZADOR'].includes(datos.sesion.rol) ? {} : datos;
+    return datos.sesion && !['ELABORADOR', 'OPERADOR'].includes(datos.sesion.rol) ? {} : datos;
   } catch { return {}; }
 }
 export function SesionProvider({ children }) {

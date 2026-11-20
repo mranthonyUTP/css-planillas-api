@@ -18,7 +18,6 @@ export function balboas(monto) {
   if (monto === '' || monto == null || !Number.isFinite(Number(monto))) return '—';
   return `B/. ${new Intl.NumberFormat('es-PA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(monto))}`;
 }
-export const nombreRol = (rol) => ({ ELABORADOR: 'Elaborador', OPERADOR: 'Operador', AUTORIZADOR: 'Autorizador' })[rol] ?? 'Usuario';
-export const nombreAccion = (accion) => ({ carga: 'Archivo cargado', solicitar: 'Revisión solicitada', aprobar: 'Revisión aprobada', autorizar: 'Autorización interna', 'devolver-revision': 'Devuelta por operador', 'devolver-autorizacion': 'Devuelta por autorizador' })[accion] ?? accion;
-export const nombreEstado = (estado) => ({ BORRADOR: 'Borrador', PENDIENTE_REVISION: 'Pendiente de revisión', PENDIENTE_AUTORIZACION: 'Pendiente de autorización', DEVUELTA: 'Devuelta para corregir', AUTORIZADA: 'Autorizada internamente' })[estado] ?? estado ?? '—';
-export const claseEstado = (estado) => estado === 'AUTORIZADA' ? 'etiqueta-exito' : estado === 'DEVUELTA' ? 'etiqueta-error' : 'etiqueta-info';
+export const nombreRol = rol => rol === 'OPERADOR' ? 'Operador' : 'Responsable de planillas';
+export const nombreEstado = estado => ({ FORMATO_INVALIDO: 'Con observaciones de formato', CONTRASTE_NO_COMPARABLE: 'Contraste no disponible', SIN_REFERENCIA: 'Sin referencia', DIFERENCIAS_POR_REVISAR: 'Diferencias para revisar', SIN_DIFERENCIAS: 'Sin diferencias de sueldo y presencia' })[estado] ?? 'Sin referencia';
+export const claseEstado = estado => estado === 'FORMATO_INVALIDO' || estado === 'CONTRASTE_NO_COMPARABLE' ? 'etiqueta-error' : 'etiqueta-info';
