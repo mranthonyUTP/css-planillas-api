@@ -31,12 +31,15 @@ details[open] > summary.enlace-accion::before, .rubros-ceros[open] > summary::be
 .revision-despejada .filtro-trabajadores { border: 0; border-radius: 6px; padding: 8px 12px; min-height: 44px; }
 .revision-despejada .filtro-trabajadores.seleccionado { background: var(--azul-claro); }
 .revision-despejada .busqueda-trabajador input { background: var(--fondo); border-color: transparent; }
-.revision-despejada .tabla-trabajadores { min-width: 700px; table-layout: fixed; }
-.revision-despejada .tabla-trabajadores th:nth-child(1) { width: 10%; }
-.revision-despejada .tabla-trabajadores th:nth-child(2) { width: 30%; }
-.revision-despejada .tabla-trabajadores th:nth-child(3) { width: 23%; }
-.revision-despejada .tabla-trabajadores th:nth-child(4) { width: 23%; }
-.revision-despejada .tabla-trabajadores th:nth-child(5) { width: 14%; }
+.revision-despejada .tabla-trabajadores { min-width: 920px; table-layout: fixed; }
+.revision-despejada .tabla-trabajadores th:nth-child(1) { width: 6%; }
+.revision-despejada .tabla-trabajadores th:nth-child(2) { width: 20%; }
+.revision-despejada .tabla-trabajadores th:nth-child(3) { width: 13%; }
+.revision-despejada .tabla-trabajadores th:nth-child(4) { width: 13%; }
+.revision-despejada .tabla-trabajadores th:nth-child(5) { width: 13%; }
+.revision-despejada .tabla-trabajadores th:nth-child(6) { width: 20%; }
+.revision-despejada .tabla-trabajadores th:nth-child(7) { width: 15%; }
+.revision-despejada .resultado-trabajador > span, .revision-despejada .boton-fila { white-space: nowrap; }
 .revision-despejada .tabla-trabajadores th { font-size: 12px; font-weight: 500; color: var(--texto-secundario); }
 .revision-despejada .tabla-trabajadores td { border: 0; padding-top: 18px; padding-bottom: 18px; }
 .revision-despejada .trabajador-nombre { color: var(--azul-marino); font-size: 16px; }
@@ -91,8 +94,10 @@ details[open] > summary.enlace-accion::before, .rubros-ceros[open] > summary::be
   .revision-despejada .tabla-trabajadores tbody > tr:not(.fila-detalle) > td:first-child { display: none; }
   .revision-despejada .tabla-trabajadores tbody > tr:not(.fila-detalle) > td:nth-child(2) { grid-column: 1; grid-row: 1; }
   .revision-despejada .tabla-trabajadores tbody > tr:not(.fila-detalle) > td:nth-child(3) { grid-column: 2; grid-row: 1; font-size: 14px; }
-  .revision-despejada .tabla-trabajadores tbody > tr:not(.fila-detalle) > td:nth-child(4) { grid-column: 1; grid-row: 2; }
-  .revision-despejada .tabla-trabajadores tbody > tr:not(.fila-detalle) > td:nth-child(5) { grid-column: 2; grid-row: 2; text-align: right; }
+  .revision-despejada .tabla-trabajadores tbody > tr:not(.fila-detalle) > td:nth-child(4) { grid-column: 1; grid-row: 2; font-size: 13px; text-align: left; }
+  .revision-despejada .tabla-trabajadores tbody > tr:not(.fila-detalle) > td:nth-child(5) { grid-column: 2; grid-row: 2; font-size: 13px; }
+  .revision-despejada .tabla-trabajadores tbody > tr:not(.fila-detalle) > td:nth-child(6) { grid-column: 1; grid-row: 3; }
+  .revision-despejada .tabla-trabajadores tbody > tr:not(.fila-detalle) > td:nth-child(7) { grid-column: 2; grid-row: 3; text-align: right; }
   .revision-despejada .tabla-trabajadores .fila-detalle, .revision-despejada .tabla-trabajadores .fila-detalle > td { display: block; width: 100%; }
   .revision-despejada .trabajador-nombre { font-size: 14px; }
   .revision-despejada .rubros-grid { grid-template-columns: minmax(0,1fr); }

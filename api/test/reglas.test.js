@@ -67,3 +67,8 @@ test('una regla desactivada no reporta errores y las demás siguen activas', () 
 test('reglasActivas rechaza ids desconocidos', () => {
   assert.throws(() => reglasActivas(['no_existe']), /desconocidas: no_existe/);
 });
+
+test('HU-24: rechaza salario mayor que 0 cuando dias_laborados es 0', () => {
+  const errores = validarRegistro({ ...valido, salario: '850.00', dias_laborados: '0' }, 2);
+  assert.equal(errores.some((e) => e.campo === 'Días laborados'), true);
+});

@@ -55,3 +55,44 @@ test('trata encabezados con nombres de propiedades de Object como texto desconoc
   assert.equal(normalizarEncabezado('constructor'), 'constructor');
   const v = validar([registro(1)], [...COLUMNAS_SIPE, 'constructor']); assert.equal(v.estructuraValida, false); assert.equal(typeof v.errores.find((e) => e.campoId === 'constructor').campo, 'string');
 });
+
+import { calcularCuotasTrabajador, calcularCuotasPlanilla } from './planillas.js';
+
+test('HU-23: calcula cuotas obrero-patronales CSS (Ley 462), escalonamiento 2027 y décimo tercer mes', () => {
+  const emp = {
+    sueldo: '1000.00',
+    rubros: { sueldo: '1000.00', horas_extras: '200.00', impuesto_sobre_renta: '50.00' },
+  };
+  const c = calcularCuotasTrabajador(emp, { periodo: '2026-11' });
+  assert.equal(c.baseCotizable, 1200);
+  assert.equal(c.ssEmpleado, 117);
+  assert.equal(c.seEmpleado, 15);
+  assert.equal(c.isrDeclarado, 50);
+  assert.equal(c.salarioNetoEstimado, 1018);
+  assert.equal(c.ssPatronal, 159);
+  assert.equal(c.sePatronal, 18);
+  assert.equal(c.riesgosProfesionales, 18);
+  assert.equal(c.totalCss, 327);
+
+  const c2027 = calcularCuotasTrabajador({ sueldo: '1000.00', rubros: { sueldo: '1000.00' } }, { periodo: '2027-03' });
+  assert.equal(c2027.ssPatronal, 142.5);
+  assert.equal(c2027.tasas.ssPatronal, 0.1425);
+
+  const cDecimo = calcularCuotasTrabajador({ sueldo: '0.00', rubros: { sueldo: '0.00', decimo_tercer_mes: '1000.00' } }, { periodo: '2026-12' });
+  assert.equal(cDecimo.ssEmpleado, 72.5);
+  assert.equal(cDecimo.ssPatronal, 107.5);
+  assert.equal(cDecimo.seEmpleado, 0);
+
+  const planilla = calcularCuotasPlanilla([emp], { periodo: '2026-11' });
+  assert.equal(planilla.trabajadoresCalculados, 1);
+  assert.equal(planilla.totalCss, 327);
+});
+
+test('HU-24: rechaza pasaporte inválido y horas extras con sueldo en cero', () => {
+  const v = validar([
+    registro(1, { tipo_documento: 'Pasaporte', numero_documento: 'AB-12' }),
+    registro(2, { sueldo: '0.00', horas_extras: '50.00' }),
+  ]);
+  assert.equal(v.errores.some((e) => e.campoId === 'numero_documento'), true);
+  assert.equal(v.errores.some((e) => e.campoId === 'horas_extras'), true);
+});

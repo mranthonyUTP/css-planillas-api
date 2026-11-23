@@ -5,7 +5,7 @@ import cors from 'cors';
 import multer from 'multer';
 import { pinoHttp } from 'pino-http';
 import { config } from './config.js';
-import { login, requiereAuth, requiereRol, rucsPermitidos } from './auth.js';
+import { login, requiereAuth, limitarTasa, requiereRol, rucsPermitidos } from './auth.js';
 import { ErrorApi, solicitudInvalida, noEncontrado, noAutorizado } from './errores.js';
 import { leerPlanilla } from './validacion/lector.js';
 import { validarPlanilla, NOMBRES_CAMPO } from './validacion/reglas.js';
@@ -26,11 +26,42 @@ function tokenValido(cabecera, esperado) {
 const detallePublico = (serie) => ({ ...resumirSerie(serie), intentos: serie.intentos, revisionesInternas: revisionesPublicas(serie) });
 const exigirUuid = (valor, mensaje) => { if (typeof valor !== 'string' || !UUID.test(valor)) throw solicitudInvalida(mensaje); };
 
-export function crearApp({ store, logger, reglasDesactivadas = config.reglasDesactivadas, metricas = crearMetricas(), tokenMetricas = config.metricasToken }) {
+
+// HU-13: Rate limiting en memoria por empresa (RUC) o IP de origen para proteger la API contra abuso.
+function crearLimitadorTasa({ ventanaMs = 60_000, maxSolicitudes = 60 } = {}) {
+  const registros = new Map();
+  return (req, res, next) => {
+    if (req.path === '/salud' || maxSolicitudes <= 0) return next();
+    const ahora = Date.now();
+    const clave = req.usuario?.ruc ? `ruc:${req.usuario.ruc}` : `ip:${req.ip ?? 'local'}`;
+    let entrada = registros.get(clave);
+    if (!entrada || ahora >= entrada.reiniciaEn) {
+      entrada = { conteo: 0, reiniciaEn: ahora + ventanaMs };
+      registros.set(clave, entrada);
+    }
+    entrada.conteo += 1;
+    const restantes = Math.max(0, maxSolicitudes - entrada.conteo);
+    res.set('X-RateLimit-Limit', String(maxSolicitudes));
+    res.set('X-RateLimit-Remaining', String(restantes));
+    if (entrada.conteo > maxSolicitudes) {
+      const esperarSeg = Math.max(1, Math.ceil((entrada.reiniciaEn - ahora) / 1000));
+      res.set('Retry-After', String(esperarSeg));
+      return res.status(429).json({
+        mensaje: `Demasiadas solicitudes para esta empresa. Intenta de nuevo en ${esperarSeg} segundos.`,
+        codigo: 'limite_tasa_excedido',
+      });
+    }
+    return next();
+  };
+}
+
+export function crearApp({ store, logger, reglasDesactivadas = config.reglasDesactivadas, metricas = crearMetricas(), tokenMetricas = config.metricasToken, limiteTasaMax = Number(process.env.RATE_LIMIT_MAX ?? 60) }) {
   const activas = reglasActivas(reglasDesactivadas), app = express();
   app.disable('x-powered-by'); app.set('trust proxy', 1); app.use(metricas.middleware); app.use(helmet());
   app.use(cors({ origin: config.origenesPermitidos, allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key'] }));
   app.use(express.json({ limit: '10kb' }));
+  const limitarTasa = crearLimitadorTasa({ maxSolicitudes: limiteTasaMax });
+  app.use(limitarTasa);
   if (logger) app.use(pinoHttp({ logger, redact: ['req.headers.authorization'], genReqId: (req) => req.get('x-request-id') ?? randomUUID() }));
   const subida = multer({ storage: multer.memoryStorage(), limits: { fileSize: config.tamanoMaximoMb * 1024 * 1024, files: 2, fields: 5 } });
   app.get('/salud', (_req, res) => res.json({ estado: 'ok', almacenamiento: store.tipo }));
@@ -40,8 +71,8 @@ export function crearApp({ store, logger, reglasDesactivadas = config.reglasDesa
     res.type('text/plain; version=0.0.4').send(metricas.exponer({ almacenamiento: store.tipo }));
   });
   app.post('/auth/login', login);
-  app.get('/reglas', requiereAuth, (_req, res) => res.json(Object.entries(NOMBRES_CAMPO).map(([id, campo]) => ({ id, campo, activa: activas.has(id) }))));
-  app.post('/planillas/validar', requiereAuth, requiereRol('ELABORADOR'), subida.fields([{ name: 'archivo', maxCount: 1 }, { name: 'referencia', maxCount: 1 }]), async (req, res) => {
+  app.get('/reglas', requiereAuth, limitarTasa, (_req, res) => res.json(Object.entries(NOMBRES_CAMPO).map(([id, campo]) => ({ id, campo, activa: activas.has(id) }))));
+  app.post('/planillas/validar', requiereAuth, limitarTasa, requiereRol('ELABORADOR'), subida.fields([{ name: 'archivo', maxCount: 1 }, { name: 'referencia', maxCount: 1 }]), async (req, res) => {
     const { periodo, tipo, serieId } = req.body ?? {};
     const principal = req.files?.archivo?.[0], referencia = req.files?.referencia?.[0];
     if (!principal) throw solicitudInvalida('Adjunta el archivo de la planilla en el campo "archivo".');
@@ -57,14 +88,14 @@ export function crearApp({ store, logger, reglasDesactivadas = config.reglasDesa
       formato: resultado.formato ?? 'demo-5-columnas', trabajadores: resultado.trabajadores ?? [] };
     res.json(await store.guardarIntento({ serieId: serieId || undefined, intento }));
   });
-  app.get('/planillas', requiereAuth, async (req, res) => res.json(await store.listarPlanillas(rucsPermitidos(req.usuario))));
+  app.get('/planillas', requiereAuth, limitarTasa, async (req, res) => res.json(await store.listarPlanillas(rucsPermitidos(req.usuario))));
   const obtenerSerie = async (req) => {
     exigirUuid(req.params.id, 'El identificador de la planilla no es válido.');
     const serie = await store.obtenerPlanilla(req.params.id, rucsPermitidos(req.usuario));
     if (!serie) throw noEncontrado('No encontramos esa planilla.');
     return serie;
   };
-  app.get('/planillas/:id/comparar', requiereAuth, async (req, res) => {
+  app.get('/planillas/:id/comparar', requiereAuth, limitarTasa, async (req, res) => {
     const serie = await obtenerSerie(req), { anterior, actual } = req.query;
     exigirUuid(anterior, 'Selecciona el intento anterior.'); exigirUuid(actual, 'Selecciona el intento posterior.');
     const antes = serie.intentos.find((i) => i.id === anterior), despues = serie.intentos.find((i) => i.id === actual);
@@ -72,7 +103,7 @@ export function crearApp({ store, logger, reglasDesactivadas = config.reglasDesa
     if (antes.numero >= despues.numero) throw solicitudInvalida('El primer intento debe ser anterior al posterior.');
     res.json(compararIntentos(antes, despues));
   });
-  app.get('/planillas/:id', requiereAuth, async (req, res) => res.json(detallePublico(await obtenerSerie(req))));
+  app.get('/planillas/:id', requiereAuth, limitarTasa, async (req, res) => res.json(detallePublico(await obtenerSerie(req))));
   const revisar = (enviar) => async (req, res) => {
     exigirUuid(req.params.id, 'La planilla no es válida.');
     const { intentoId, decision, motivo = '' } = req.body ?? {};
@@ -85,9 +116,9 @@ export function crearApp({ store, logger, reglasDesactivadas = config.reglasDesa
       res.json(detallePublico(serie));
     } catch (err) { if (err.estado) throw new ErrorApi(err.estado, err.message, err.codigo); throw err; }
   };
-  app.post('/planillas/:id/enviar-operador', requiereAuth, requiereRol('ELABORADOR'), revisar(true));
-  app.post('/planillas/:id/decision-operador', requiereAuth, requiereRol('OPERADOR'), revisar(false));
-  app.get('/cargas', requiereAuth, async (req, res) => res.json(await store.listarCargas(rucsPermitidos(req.usuario))));
+  app.post('/planillas/:id/enviar-operador', requiereAuth, limitarTasa, requiereRol('ELABORADOR'), revisar(true));
+  app.post('/planillas/:id/decision-operador', requiereAuth, limitarTasa, requiereRol('OPERADOR'), revisar(false));
+  app.get('/cargas', requiereAuth, limitarTasa, async (req, res) => res.json(await store.listarCargas(rucsPermitidos(req.usuario))));
   app.use((_req, _res, next) => next(noEncontrado('Ruta no encontrada.')));
   app.use((err, req, res, _next) => {
     if (err instanceof multer.MulterError) {

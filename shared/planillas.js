@@ -1,5 +1,5 @@
 // Identificación y rubros del formato de referencia del manual de carga aportado.
-// La prevalidación no consulta registros ni calcula obligaciones de la CSS.
+// Incluye motor de prevalidación y cálculo referencial de cuotas CSS (Ley 462, HU-23).
 export const RUBROS = [
   ['sueldo', 'Sueldo'], ['horas_extras', 'Horas extras'],
   ['impuesto_sobre_renta', 'Impuesto sobre renta'], ['decimo_tercer_mes', 'Décimo tercer mes'],
@@ -119,6 +119,19 @@ export function validarFormatoSipe({ encabezados = [], registros = [], filaEncab
         'Se esperaba un importe numérico con hasta dos decimales.', 'Revisa el valor en el Excel original. Usa punto decimal y no incluyas símbolos ni fórmulas.');
     }
   });
+    const tipoDoc = normalizarEncabezado(r.tipo_documento);
+    if (tipoDoc === 'pasaporte' && r.numero_documento && !/^[A-Z0-9]{5,20}$/i.test(r.numero_documento)) {
+      agregar(fila, 'numero_documento', r.numero_documento,
+        'El número de pasaporte debe ser alfanumérico de 5 a 20 caracteres sin espacios ni guiones.',
+        'Elimina espacios o símbolos y verifica el código del pasaporte.');
+    }
+    const sueldoCent = centimos(r.sueldo);
+    const extrasCent = centimos(r.horas_extras);
+    if (sueldoCent === 0 && extrasCent !== null && extrasCent > 0) {
+      agregar(fila, 'horas_extras', r.horas_extras,
+        'No se deben declarar horas extras cuando el sueldo base es 0.00.',
+        'Verifica si corresponde declarar sueldo ordinario o corrige el monto de horas extras.');
+    }
   const iniciales = construirTrabajadores(registros.slice(0, 10000), errores);
   if (estructuraValida) errores.push(...erroresIdentidad(iniciales));
   let total = 0;
@@ -181,4 +194,121 @@ export function compararIntentos(anterior, actual) {
   }
   for (const [clave, t] of despues) if (!antes.has(clave)) resultado.altas.push(t);
   return resultado;
+}
+
+// HU-23: Cálculo referencial de cuotas obrero-patronales CSS (Ley 462 de 2025) parametrizado por período y salario neto estimado.
+const RUBROS_GRAVABLES_ORDINARIOS = [
+  'sueldo', 'horas_extras', 'vacaciones', 'comisiones',
+  'bonificaciones', 'salario_en_especie', 'primas_de_produccion',
+  'participacion_beneficio_ingresos', 'gratificacion_aguinaldo', 'preaviso',
+];
+const RUBROS_DECIMO = ['decimo_tercer_mes', 'decimo_tercer_mes_gasto_representacion'];
+
+export function obtenerTasasCss(periodo = '', tasaRiesgos = 0.015) {
+  const p = String(periodo ?? '').trim();
+  // Escalonamiento Ley 462 de 2025 (Art. 101):
+  // Hasta 2027-02: 13.25% patronal | Desde 2027-03: 14.25% patronal | Desde 2029-03: 15.25% patronal
+  let ssPatronal = 0.1325;
+  let tramoLey462 = 'Vigente hasta feb. 2027 (13.25 %)';
+  if (p >= '2029-03') {
+    ssPatronal = 0.1525;
+    tramoLey462 = 'Tramo mar. 2029+ (15.25 %)';
+  } else if (p >= '2027-03') {
+    ssPatronal = 0.1425;
+    tramoLey462 = 'Tramo mar. 2027 – feb. 2029 (14.25 %)';
+  }
+  return {
+    ssEmpleado: 0.0975,
+    ssPatronal,
+    seEmpleado: 0.0125,
+    sePatronal: 0.015,
+    decimoEmpleado: 0.0725,
+    decimoPatronal: 0.1075,
+    riesgosProfesionales: tasaRiesgos,
+    tramoLey462,
+  };
+}
+
+export function calcularCuotasTrabajador(trabajador, opciones = {}) {
+  const { tasaRiesgos = 0.015, periodo = '' } = typeof opciones === 'number' ? { tasaRiesgos: opciones } : opciones;
+  const tasas = obtenerTasasCss(periodo, tasaRiesgos);
+  const r = trabajador?.rubros ?? {};
+  const sumaCentimos = (ids) => ids.reduce((acc, id) => {
+    const val = id === 'sueldo' ? (r.sueldo ?? trabajador?.sueldo) : r[id];
+    const c = centimos(val);
+    return acc + (c !== null && c > 0 ? c : 0);
+  }, 0);
+
+  const baseOrdinaria = sumaCentimos(RUBROS_GRAVABLES_ORDINARIOS) / 100;
+  const baseDecimo = sumaCentimos(RUBROS_DECIMO) / 100;
+  const baseSS = Math.round((baseOrdinaria + baseDecimo) * 100) / 100;
+  const gastoRep = Math.max(0, centimos(r.gasto_de_representacion) ?? 0) / 100;
+  const isr = (Math.max(0, centimos(r.impuesto_sobre_renta) ?? 0) + Math.max(0, centimos(r.impuesto_sobre_renta_gasto_representacion) ?? 0)) / 100;
+
+  const redondear = (n) => Math.round(n * 100) / 100;
+
+  // SS Ordinario + SS Décimo Tercer Mes (7.25% emp. / 10.75% pat.)
+  const ssEmpleado = redondear(baseOrdinaria * tasas.ssEmpleado + baseDecimo * tasas.decimoEmpleado);
+  const ssPatronal = redondear(baseOrdinaria * tasas.ssPatronal + baseDecimo * tasas.decimoPatronal);
+  const seEmpleado = redondear(baseOrdinaria * tasas.seEmpleado);
+  const sePatronal = redondear(baseOrdinaria * tasas.sePatronal);
+  const riesgosProfesionales = redondear(baseOrdinaria * tasas.riesgosProfesionales);
+  const totalEmpleado = redondear(ssEmpleado + seEmpleado);
+  const totalPatronal = redondear(ssPatronal + sePatronal + riesgosProfesionales);
+  const totalCss = redondear(totalEmpleado + totalPatronal);
+  const salarioNetoEstimado = redondear(Math.max(0, (baseSS + gastoRep) - totalEmpleado - isr));
+
+  return {
+    baseCotizable: baseSS,
+    baseOrdinaria: redondear(baseOrdinaria),
+    baseDecimo: redondear(baseDecimo),
+    gastoRepresentacion: redondear(gastoRep),
+    isrDeclarado: redondear(isr),
+    ssEmpleado,
+    ssPatronal,
+    seEmpleado,
+    sePatronal,
+    riesgosProfesionales,
+    totalEmpleado,
+    totalPatronal,
+    totalCss,
+    salarioNetoEstimado,
+    tasas,
+  };
+}
+
+export function calcularCuotasPlanilla(trabajadores = [], opciones = {}) {
+  const { tasaRiesgos = 0.015, periodo = '' } = typeof opciones === 'number' ? { tasaRiesgos: opciones } : opciones;
+  const tasas = obtenerTasasCss(periodo, tasaRiesgos);
+  const acum = {
+    baseCotizable: 0,
+    baseOrdinaria: 0,
+    baseDecimo: 0,
+    gastoRepresentacion: 0,
+    isrDeclarado: 0,
+    ssEmpleado: 0,
+    ssPatronal: 0,
+    seEmpleado: 0,
+    sePatronal: 0,
+    riesgosProfesionales: 0,
+    totalEmpleado: 0,
+    totalPatronal: 0,
+    totalCss: 0,
+    salarioNetoEstimado: 0,
+    trabajadoresCalculados: 0,
+    tasas,
+  };
+  for (const t of trabajadores) {
+    const c = calcularCuotasTrabajador(t, { tasaRiesgos, periodo });
+    if (c.baseCotizable <= 0 && c.gastoRepresentacion <= 0) continue;
+    acum.trabajadoresCalculados++;
+    for (const k of [
+      'baseCotizable', 'baseOrdinaria', 'baseDecimo', 'gastoRepresentacion', 'isrDeclarado',
+      'ssEmpleado', 'ssPatronal', 'seEmpleado', 'sePatronal', 'riesgosProfesionales',
+      'totalEmpleado', 'totalPatronal', 'totalCss', 'salarioNetoEstimado',
+    ]) {
+      acum[k] = Math.round((acum[k] + c[k]) * 100) / 100;
+    }
+  }
+  return acum;
 }

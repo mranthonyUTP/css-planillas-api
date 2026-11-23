@@ -71,6 +71,18 @@ export default function DetalleSerie() {
         {((!mostrarCambios || !cambios.length) && (!mostrarAltas || !altas.length) && (!mostrarBajas || !bajas.length)) && <Aviso tipo="info">{busqueda || filtro !== 'todos' ? 'No hay cambios con estos filtros.' : 'No hay cambios entre estos intentos, aunque el orden de las filas sea diferente.'}</Aviso>}
         <section className="tarjeta"><h2 className="titulo-tarjeta">Datos que permanecen iguales</h2><p className="texto-secundario">{iguales.length} trabajadores sin cambios.{!antes?.totalSalariosParcial && !despues?.totalSalariosParcial && antes?.estructuraValida !== false && despues?.estructuraValida !== false && comparacion.totales?.antes?.sueldos === comparacion.totales?.despues?.sueldos && <> Sueldos declarados: <span className="mono">{balboas(comparacion.totales?.despues?.sueldos)}</span>.</>}</p><details><summary className="enlace-accion">Ver registros sin cambios</summary><div className="tabla-contenedor"><table className="tabla"><thead><tr><th>Trabajador</th><th>Documento</th><th>Sueldo declarado</th></tr></thead><tbody>{iguales.filter((t) => coincide(t.nombreCompleto, t.documento)).map((t, i) => <tr key={`${t.clave}-${i}`}><th scope="row">{t.nombreCompleto}</th><td>{t.documento}</td><td className="mono">{original(t.sueldo)}</td></tr>)}</tbody></table></div></details></section>
       </>}
+      {(detalle.revisionesInternas?.length ?? 0) > 0 && (
+        <section className="tarjeta sin-relleno">
+          <div className="tarjeta-cabecera"><h2 className="titulo-tarjeta">Bitácora de revisiones internas ({detalle.revisionesInternas.length})</h2></div>
+          <div className="tabla-contenedor"><table className="tabla"><thead><tr><th>Fecha y hora</th><th>Intento</th><th>Acción</th><th>Usuario</th><th>Motivo</th></tr></thead><tbody>
+            {detalle.revisionesInternas.map((r) => {
+              const etiqueta = r.accion === 'autorizar-operador' ? 'Autorizada internamente' : r.accion === 'devolver-operador' ? 'Devuelta para corregir' : 'Enviada para autorización';
+              const intentoNum = intentos.find((i) => i.id === r.intentoId)?.numero;
+              return <tr key={r.id}><td>{fechaHora(r.fecha)}</td><td className="mono">{intentoNum ? `#${intentoNum}` : '—'}</td><td><span className={`etiqueta ${r.accion === 'autorizar-operador' ? 'etiqueta-exito' : r.accion === 'devolver-operador' ? 'etiqueta-error' : 'etiqueta-info'}`}>{etiqueta}</span></td><td>{r.usuario}</td><td>{r.motivo || '—'}</td></tr>;
+            })}
+          </tbody></table></div>
+        </section>
+      )}
       <div className="acciones entre"><Link className="boton boton-secundario" to="/historial">Volver al historial</Link><Link className="boton boton-primario" to={`/revision/${encodeURIComponent(serieId)}`}>Abrir revisión actual →</Link></div>
     </div>}
   </div></Marco>;

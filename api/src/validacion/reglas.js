@@ -79,6 +79,11 @@ export function validarRegistro(registro, numeroFila, activas = new Set(IDS_REGL
     agregar('dias_laborados', dias, 'El mes no puede tener más de 31 días.', 'Indica un número entero entre 0 y 31.');
   }
 
+  // HU-24: consistencia entre días laborados y salario devengado
+  if (activas.has('salario') && activas.has('dias_laborados') && /^\d+(\.\d{1,2})?$/.test(salario) && Number(salario) > 0 && dias === '0') {
+    agregar('dias_laborados', dias, 'Se declaró salario mayor que 0 con 0 días laborados.', 'Indica los días efectivamente laborados en el período (entre 1 y 31).');
+  }
+
   const codigo = registro.codigo_ocupacion ?? '';
   if (!activas.has('codigo_ocupacion')) {
     // regla desactivada por feature flag

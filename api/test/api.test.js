@@ -110,3 +110,23 @@ describe('Reglas del formato demo', () => {
     assert.equal(reglas.length, 5); assert.deepEqual(reglas.filter((r) => !r.activa).map((r) => r.id), ['dias_laborados', 'codigo_ocupacion']);
   });
 });
+
+test('HU-13: limita solicitudes excedidas por empresa con HTTP 429', async () => {
+  const store = crearStoreMemoria();
+  const srv = crearApp({ store, limiteTasaMax: 2 }).listen(0);
+  await new Promise((r) => srv.once('listening', r));
+  const url = `http://127.0.0.1:${srv.address().port}`;
+  try {
+    const tok = await emitirToken({ ruc: '155-limit-1', usuario: 'ana', empresa: 'Demo', roles: ['ELABORADOR'], empresas: [{ ruc: '155-limit-1', nombre: 'Demo' }] });
+    const h = { Authorization: `Bearer ${tok}` };
+    const r1 = await fetch(`${url}/reglas`, { headers: h });
+    const r2 = await fetch(`${url}/reglas`, { headers: h });
+    const r3 = await fetch(`${url}/reglas`, { headers: h });
+    assert.equal(r1.status, 200);
+    assert.equal(r2.status, 200);
+    assert.equal(r3.status, 429);
+  } finally {
+    await new Promise((r) => srv.close(r));
+    await store.cerrar();
+  }
+});

@@ -1,0 +1,24 @@
+PORTAL DE PLANILLAS - INICIO
+
+Extrae la carpeta completa. web, api y shared deben permanecer juntas.
+
+Necesitas Node.js 22.12 o posterior. Desde la carpeta del proyecto:
+
+cd web
+npm.cmd install
+npm.cmd run dev
+
+Abre la direccion que muestre Vite, normalmente http://localhost:5173
+
+CUENTAS DE DEMOSTRACION
+RUC principal: 155123456-2-2020
+Contrasena: demo1234
+Empleador: ana.contabilidad
+
+Prueba el ejemplo con errores. Desde su revision, carga el archivo corregido.
+Consulta el historial y compara los intentos. Adjunta opcionalmente una nomina
+de referencia para contrastar presencia de trabajadores y sueldo.
+Usa el mismo navegador y direccion: la demostracion conserva datos localmente.
+
+El contraste no certifica datos reales ni presenta o paga planillas ante CSS.
+Consulta README.md para usar la API y PostgreSQL.
