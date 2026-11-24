@@ -5,7 +5,7 @@ import cors from 'cors';
 import multer from 'multer';
 import { pinoHttp } from 'pino-http';
 import { config } from './config.js';
-import { login, requiereAuth, limitarTasa, requiereRol, rucsPermitidos } from './auth.js';
+import { login, requiereAuth, requiereRol, rucsPermitidos } from './auth.js';
 import { ErrorApi, solicitudInvalida, noEncontrado, noAutorizado } from './errores.js';
 import { leerPlanilla } from './validacion/lector.js';
 import { validarPlanilla, NOMBRES_CAMPO } from './validacion/reglas.js';

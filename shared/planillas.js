@@ -118,7 +118,6 @@ export function validarFormatoSipe({ encabezados = [], registros = [], filaEncab
       else if (valor !== '' && centimos(valor) === null) agregar(fila, id, valor,
         'Se esperaba un importe numérico con hasta dos decimales.', 'Revisa el valor en el Excel original. Usa punto decimal y no incluyas símbolos ni fórmulas.');
     }
-  });
     const tipoDoc = normalizarEncabezado(r.tipo_documento);
     if (tipoDoc === 'pasaporte' && r.numero_documento && !/^[A-Z0-9]{5,20}$/i.test(r.numero_documento)) {
       agregar(fila, 'numero_documento', r.numero_documento,
@@ -132,6 +131,7 @@ export function validarFormatoSipe({ encabezados = [], registros = [], filaEncab
         'No se deben declarar horas extras cuando el sueldo base es 0.00.',
         'Verifica si corresponde declarar sueldo ordinario o corrige el monto de horas extras.');
     }
+  });
   const iniciales = construirTrabajadores(registros.slice(0, 10000), errores);
   if (estructuraValida) errores.push(...erroresIdentidad(iniciales));
   let total = 0;
